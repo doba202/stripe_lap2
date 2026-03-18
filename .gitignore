@@ -1,0 +1,7 @@
+credential_config/
+logs/
+dbts/logs/
+dbts/target/
+dbts/dbt_packages/
+.env
+.idea/

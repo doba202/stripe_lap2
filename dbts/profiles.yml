@@ -1,0 +1,13 @@
+stripe_lap:
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: apero-data-warehouse
+      dataset: doba_dev
+      keyfile: /opt/airflow/credential_config/service-account.json
+      location: US
+      threads: 4
+      timeout_seconds: 300
+      priority: interactive
+  target: dev
