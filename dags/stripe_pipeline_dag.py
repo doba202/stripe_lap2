@@ -2,106 +2,11 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
 from services.stripe.client import StripeClient
+from services.stripe.config import STRIPE_RESOURCES
 from services.bigquery.loader import insert_raw
+from services.bigquery.config import TABLE_CONFIG,DATASET,PROJECT_ID
 import json
-PROJECT_ID = "apero-data-warehouse"
-DATASET = "doba_dev"
-TABLE_CONFIG = {
-    "customers": {
-        "mode": "json",
-        "schema": [
-            {"name": "id", "type": "STRING"},
-            {"name": "call_at", "type": "DATETIME"},
-            {"name": "data_json", "type": "JSON"},
-        ]
-    },
-    "subscriptions": {
-        "mode": "json",
-        "schema": [
-            {"name": "id", "type": "STRING"},
-            {"name": "call_at", "type": "DATETIME"},
-            {"name": "data_json", "type": "JSON"},
-        ]
-    },
-    "invoices": {
-            "mode": "json",
-            "schema": [
-                {"name": "id", "type": "STRING"},
-                {"name": "call_at", "type": "DATETIME"},
-                {"name": "data_json", "type": "JSON"},
-            ]
-    },
-    "charges": {
-                "mode": "json",
-                "schema": [
-                    {"name": "id", "type": "STRING"},
-                    {"name": "call_at", "type": "DATETIME"},
-                    {"name": "data_json", "type": "JSON"},
-                ]
-    },
-    "payment_intents": {
-                    "mode": "json",
-                    "schema": [
-                        {"name": "id", "type": "STRING"},
-                        {"name": "call_at", "type": "DATETIME"},
-                        {"name": "data_json", "type": "JSON"},
-                    ]
-    },
-    "plans": {
-                "mode": "json",
-                "schema": [
-                    {"name": "id", "type": "STRING"},
-                    {"name": "call_at", "type": "DATETIME"},
-                    {"name": "data_json", "type": "JSON"},
-                ]
-    },
-    "products": {
-                "mode": "json",
-                "schema": [
-                    {"name": "id", "type": "STRING"},
-                    {"name": "call_at", "type": "DATETIME"},
-                    {"name": "data_json", "type": "JSON"},
-                ]
-    },
-    "refunds": {
-                    "mode": "json",
-                    "schema": [
-                        {"name": "id", "type": "STRING"},
-                        {"name": "call_at", "type": "DATETIME"},
-                        {"name": "data_json", "type": "JSON"},
-                    ]
-    },
-    "balance_transactions": {
-                        "mode": "json",
-                        "schema": [
-                            {"name": "id", "type": "STRING"},
-                            {"name": "call_at", "type": "DATETIME"},
-                            {"name": "data_json", "type": "JSON"},
-                        ]
-    },
-    "subscription_items": {
-                            "mode": "json",
-                            "schema": [
-                                {"name": "id", "type": "STRING"},
-                                {"name": "call_at", "type": "DATETIME"},
-                                {"name": "data_json", "type": "JSON"},
-                            ]
-    },
-    "balance": {
-        "mode": "structured",
-        "schema": [
-            {"name": "call_at", "type": "DATETIME"},
-            {"name": "available", "type": "JSON", "mode": "REPEATED"},
-            {"name": "pending", "type": "JSON", "mode": "REPEATED"},
-            {"name": "refund_and_dispute_prefunding", "type": "JSON", "mode": "REPEATED"},
-        ]
-    }
-}
 
-STRIPE_RESOURCES = [
-    "customers", "subscriptions", "invoices", "charges", "payment_intents",
-        "plans", "prices", "products", "refunds", "balance_transactions", "balance"
-]
 
 client = StripeClient()
 
@@ -140,9 +45,6 @@ def transform_record(resource, record):
             row[field_name] = value
 
     return row
-
-
-
 
 def start():
     print("Start pipeline...")

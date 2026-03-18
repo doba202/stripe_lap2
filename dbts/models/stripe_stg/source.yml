@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+  - name: stripe_stg
+    database: apero-data-warehouse
+    schema: doba_dev
+
+    tables:
+      - name: stripe_raw_customers
+      - name: stripe_raw_subscriptions
+      - name: stripe_raw_invoices
+      - name: stripe_raw_charges
+      - name: stripe_raw_payment_intents
+      - name: stripe_raw_plans
+      - name: stripe_raw_prices
+      - name: stripe_raw_products
+      - name: stripe_raw_refunds
+      - name: stripe_raw_balance_transactions
+      - name: stripe_raw_balance
+      - name: stripe_raw_subscription_items

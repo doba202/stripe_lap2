@@ -55,3 +55,7 @@ ENDPOINT_RULES = {
         "limit": False
     }
 }
+STRIPE_RESOURCES = [
+    "customers", "subscriptions", "invoices", "charges", "payment_intents",
+        "plans", "prices", "products", "refunds", "balance_transactions", "balance"
+]

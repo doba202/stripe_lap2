@@ -13,7 +13,6 @@ def insert_raw(table_name, records, schema):
             mode = field.get("mode", "NULLABLE")
 
             value = r.get(name)
-            print('tes',mode,name,value)
             # REPEATED
             if mode == "REPEATED":
                 if value is None:
