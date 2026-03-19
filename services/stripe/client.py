@@ -60,3 +60,31 @@ class StripeClient:
             starting_after = data[-1].get("id")
 
         return all_data
+
+    def fetch(self, resource, mode="init", start=None, end=None, params=None):
+        rule = ENDPOINT_RULES.get(resource)
+        if not rule:
+            raise ValueError(f"No rule defined for {resource}")
+
+        mode_conf = rule["modes"].get(mode)
+        if not mode_conf:
+            raise ValueError(f"{resource} does not support mode {mode}")
+
+        strategy = mode_conf.get("strategy")
+        print('sssss',strategy,mode_conf)
+        final_params = dict(params or {})
+
+        # 👉 incremental (daily)
+        if strategy == "incremental":
+            field = mode_conf["range_field"]
+
+            range_filter = {}
+            if start:
+                range_filter["gt"] = start
+            if end:
+                range_filter["lte"] = end
+
+            if range_filter:
+                final_params[field] = range_filter
+
+        # return self.get_all(resource, params=final_params)
