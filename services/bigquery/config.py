@@ -5,6 +5,8 @@ TABLE_CONFIG = {
         "mode": "json",
         "schema": [
             {"name": "id", "type": "STRING"},
+            {"name": "open_id", "type": "STRING"},
+            {"name": "created_at", "type": "DATETIME"},
             {"name": "call_at", "type": "DATETIME"},
             {"name": "data_json", "type": "JSON"},
         ]
@@ -13,6 +15,8 @@ TABLE_CONFIG = {
         "mode": "json",
         "schema": [
             {"name": "id", "type": "STRING"},
+            {"name": "open_id", "type": "STRING"},
+            {"name": "created_at", "type": "DATETIME"},
             {"name": "call_at", "type": "DATETIME"},
             {"name": "data_json", "type": "JSON"},
         ]
@@ -21,6 +25,8 @@ TABLE_CONFIG = {
             "mode": "json",
             "schema": [
                 {"name": "id", "type": "STRING"},
+                {"name": "open_id", "type": "STRING"},
+                {"name": "created_at", "type": "DATETIME"},
                 {"name": "call_at", "type": "DATETIME"},
                 {"name": "data_json", "type": "JSON"},
             ]
@@ -29,6 +35,8 @@ TABLE_CONFIG = {
                 "mode": "json",
                 "schema": [
                     {"name": "id", "type": "STRING"},
+                    {"name": "open_id", "type": "STRING"},
+                    {"name": "created_at", "type": "DATETIME"},
                     {"name": "call_at", "type": "DATETIME"},
                     {"name": "data_json", "type": "JSON"},
                 ]
@@ -37,6 +45,8 @@ TABLE_CONFIG = {
                     "mode": "json",
                     "schema": [
                         {"name": "id", "type": "STRING"},
+                        {"name": "open_id", "type": "STRING"},
+                    {"name": "created_at", "type": "DATETIME"},
                         {"name": "call_at", "type": "DATETIME"},
                         {"name": "data_json", "type": "JSON"},
                     ]
@@ -45,6 +55,8 @@ TABLE_CONFIG = {
                 "mode": "json",
                 "schema": [
                     {"name": "id", "type": "STRING"},
+                    {"name": "open_id", "type": "STRING"},
+                    {"name": "created_at", "type": "DATETIME"},
                     {"name": "call_at", "type": "DATETIME"},
                     {"name": "data_json", "type": "JSON"},
                 ]
@@ -53,6 +65,8 @@ TABLE_CONFIG = {
                 "mode": "json",
                 "schema": [
                     {"name": "id", "type": "STRING"},
+                    {"name": "open_id", "type": "STRING"},
+                    {"name": "created_at", "type": "DATETIME"},
                     {"name": "call_at", "type": "DATETIME"},
                     {"name": "data_json", "type": "JSON"},
                 ]
@@ -61,6 +75,8 @@ TABLE_CONFIG = {
                     "mode": "json",
                     "schema": [
                         {"name": "id", "type": "STRING"},
+                        {"name": "open_id", "type": "STRING"},
+                    {"name": "created_at", "type": "DATETIME"},
                         {"name": "call_at", "type": "DATETIME"},
                         {"name": "data_json", "type": "JSON"},
                     ]
@@ -69,6 +85,8 @@ TABLE_CONFIG = {
         "mode": "json",
         "schema": [
             {"name": "id", "type": "STRING"},
+            {"name": "open_id", "type": "STRING"},
+            {"name": "created_at", "type": "DATETIME"},
             {"name": "call_at", "type": "DATETIME"},
             {"name": "data_json", "type": "JSON"},
         ]
@@ -77,6 +95,8 @@ TABLE_CONFIG = {
                         "mode": "json",
                         "schema": [
                             {"name": "id", "type": "STRING"},
+                            {"name": "open_id", "type": "STRING"},
+                            {"name": "created_at", "type": "DATETIME"},
                             {"name": "call_at", "type": "DATETIME"},
                             {"name": "data_json", "type": "JSON"},
                         ]
@@ -85,6 +105,8 @@ TABLE_CONFIG = {
                             "mode": "json",
                             "schema": [
                                 {"name": "id", "type": "STRING"},
+                                {"name": "open_id", "type": "STRING"},
+                                {"name": "created_at", "type": "DATETIME"},
                                 {"name": "call_at", "type": "DATETIME"},
                                 {"name": "data_json", "type": "JSON"},
                             ]
@@ -92,6 +114,7 @@ TABLE_CONFIG = {
     "balance": {
         "mode": "structured",
         "schema": [
+            {"name": "open_id", "type": "STRING"},
             {"name": "call_at", "type": "DATETIME"},
             {"name": "available", "type": "JSON", "mode": "REPEATED"},
             {"name": "pending", "type": "JSON", "mode": "REPEATED"},

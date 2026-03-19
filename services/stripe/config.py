@@ -1,3 +1,8 @@
+import os
+import json
+STRIPE_ACCOUNTS = json.loads(
+    os.getenv("STRIPE_ACCOUNTS_JSON", "{}")
+)
 ENDPOINT_RULES = {
     "customers": {
         "type": "list",

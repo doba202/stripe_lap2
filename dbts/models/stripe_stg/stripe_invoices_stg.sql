@@ -1,10 +1,11 @@
 WITH source AS (
-    SELECT data_json
+    SELECT open_id,data_json
     FROM {{ source('stripe_stg', 'stripe_raw_invoices') }}
 ),
 
 parsed AS (
     SELECT
+        open_id,
         -- ===================== PRIMARY =====================
         JSON_VALUE(data_json, '$.id') AS invoice_id,
         JSON_VALUE(data_json, '$.number') AS invoice_number,

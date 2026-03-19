@@ -1,6 +1,6 @@
 WITH source AS (
     SELECT
-        id AS raw_id,
+        open_id,
         data_json
     FROM {{ source('stripe_stg', 'stripe_raw_balance_transactions') }}
 ),
@@ -8,6 +8,7 @@ WITH source AS (
 parsed AS (
     SELECT
         -- ===== PRIMARY KEY =====
+        open_id,
         JSON_VALUE(data_json, '$.id') AS balance_txn_id,
 
         -- ===== AMOUNT =====

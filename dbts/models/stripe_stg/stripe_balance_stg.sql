@@ -1,6 +1,6 @@
 WITH source AS (
     SELECT
-        call_at,
+        open_id,call_at,
         available,
         pending,
         refund_and_dispute_prefunding
@@ -10,7 +10,7 @@ WITH source AS (
 -- available
 available AS (
     SELECT
-        call_at,
+        open_id,call_at,
         'available' AS type,
         item
     FROM source,
@@ -20,7 +20,7 @@ available AS (
 -- pending
 pending AS (
     SELECT
-        call_at,
+        open_id,call_at,
         'pending' AS type,
         item
     FROM source,
@@ -30,7 +30,7 @@ pending AS (
 -- prefunding level 1
 prefunding_lvl1 AS (
     SELECT
-        call_at,
+        open_id,call_at,
         pf
     FROM source,
     UNNEST(refund_and_dispute_prefunding) AS pf
@@ -39,7 +39,7 @@ prefunding_lvl1 AS (
 -- prefunding available
 prefunding_available AS (
     SELECT
-        call_at,
+        open_id,call_at,
         'prefunding_available' AS type,
         item
     FROM prefunding_lvl1,
@@ -49,7 +49,7 @@ prefunding_available AS (
 -- prefunding pending
 prefunding_pending AS (
     SELECT
-        call_at,
+        open_id,call_at,
         'prefunding_pending' AS type,
         item
     FROM prefunding_lvl1,
@@ -67,7 +67,7 @@ unioned AS (
 )
 
 SELECT
-    call_at,
+    open_id,call_at,
     type,
     JSON_VALUE(item, '$.currency') AS currency,
     CAST(JSON_VALUE(item, '$.amount') AS INT64) AS amount

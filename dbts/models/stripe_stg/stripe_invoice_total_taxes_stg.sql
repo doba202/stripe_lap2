@@ -1,5 +1,6 @@
 WITH source AS (
     SELECT
+        open_id,
         JSON_VALUE(data_json, '$.id') AS invoice_id,
         JSON_QUERY_ARRAY(data_json, '$.total_taxes') AS total_taxes
     FROM {{ source('stripe_stg', 'stripe_raw_invoices') }}
@@ -7,6 +8,7 @@ WITH source AS (
 
 unnested AS (
     SELECT
+        open_id,
         invoice_id,
         tax
     FROM source,
@@ -15,6 +17,7 @@ unnested AS (
 
 parsed AS (
     SELECT
+        open_id,
         -- ===== FK =====
         invoice_id,
 

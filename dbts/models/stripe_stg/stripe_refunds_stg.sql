@@ -1,12 +1,13 @@
 WITH source AS (
     SELECT
-        id AS raw_id,
+        open_id,
         data_json
     FROM {{ source('stripe_stg', 'stripe_raw_refunds') }}
 ),
 
 parsed AS (
     SELECT
+        open_id,
         -- ===== PRIMARY =====
         JSON_VALUE(data_json, '$.id') AS refund_id,
         JSON_VALUE(data_json, '$.object') AS object,
@@ -110,9 +111,7 @@ parsed AS (
         -- ===== CREATED =====
         TIMESTAMP_SECONDS(
             SAFE_CAST(JSON_VALUE(data_json, '$.created') AS INT64)
-        ) AS created_at,
-
-        raw_id
+        ) AS created_at
 
     FROM source
 )

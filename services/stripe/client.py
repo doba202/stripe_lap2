@@ -4,10 +4,11 @@ from .config import ENDPOINT_RULES
 BASE_URL = "https://api.stripe.com/v1"
 
 class StripeClient:
-    def __init__(self):
-        self.api_key = os.getenv("STRIPE_API_KEY")
+    def __init__(self, api_key=None):
+        self.api_key = api_key
 
     def get(self, endpoint, params=None):
+        print('api_key',self.api_key)
         response = requests.get(
             f"{BASE_URL}/{endpoint}",
             auth=(self.api_key, ""),
@@ -18,7 +19,7 @@ class StripeClient:
 
     def get_all(self, resource, params=None):
         rule = ENDPOINT_RULES.get(resource)
-
+        print('self',resource, params,self.api_key)
         if not rule:
             raise ValueError(f"No rule defined for {resource}")
 

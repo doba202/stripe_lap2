@@ -1,12 +1,13 @@
 WITH source AS (
     SELECT
-        id AS raw_id,
+        open_id,
         data_json
     FROM {{ source('stripe_stg', 'stripe_raw_plans') }}
 ),
 
 parsed AS (
     SELECT
+        open_id,
         -- ===== PRIMARY KEY =====
         JSON_VALUE(data_json, '$.id') AS plan_id,
 

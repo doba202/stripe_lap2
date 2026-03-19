@@ -1,6 +1,7 @@
 WITH source AS (
     SELECT
         id,
+        open_id,
         call_at,
         data_json
     FROM {{ source('stripe_stg', 'stripe_raw_customers') }}
@@ -9,6 +10,7 @@ WITH source AS (
 parsed AS (
     SELECT
         id,
+        open_id,
         call_at,
 
         -- basic fields
