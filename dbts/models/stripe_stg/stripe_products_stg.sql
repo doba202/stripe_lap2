@@ -35,10 +35,7 @@ parsed AS (
         JSON_VALUE(data_json, '$.unit_label') AS unit_label,
 
         -- ===== METADATA (expand nếu cần) =====
-        JSON_VALUE(data_json, '$.metadata.xxx') AS metadata_xxx,
-
-        raw_id
-
+        --JSON_VALUE(data_json, '$.metadata.xxx') AS metadata_xxx,
     FROM source
 )
 

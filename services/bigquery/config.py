@@ -65,6 +65,14 @@ TABLE_CONFIG = {
                         {"name": "data_json", "type": "JSON"},
                     ]
     },
+    "prices": {
+        "mode": "json",
+        "schema": [
+            {"name": "id", "type": "STRING"},
+            {"name": "call_at", "type": "DATETIME"},
+            {"name": "data_json", "type": "JSON"},
+        ]
+    },
     "balance_transactions": {
                         "mode": "json",
                         "schema": [

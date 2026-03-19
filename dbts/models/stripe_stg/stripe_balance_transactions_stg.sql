@@ -16,6 +16,7 @@ parsed AS (
         SAFE_CAST(JSON_VALUE(data_json, '$.net') AS INT64) AS net,
 
         JSON_VALUE(data_json, '$.currency') AS currency,
+        SAFE_CAST(JSON_VALUE(data_json, '$.exchange_rate') AS FLOAT64) AS exchange_rate,
 
         -- ===== TYPE =====
         JSON_VALUE(data_json, '$.type') AS txn_type,
@@ -28,7 +29,7 @@ parsed AS (
         -- ===== DESCRIPTION =====
         JSON_VALUE(data_json, '$.description') AS description,
 
-        -- ===== SOURCE (IMPORTANT) =====
+        -- ===== SOURCE =====
         JSON_VALUE(data_json, '$.source') AS source_id,
 
         -- ===== TIMESTAMP =====
@@ -38,9 +39,7 @@ parsed AS (
 
         TIMESTAMP_SECONDS(
             SAFE_CAST(JSON_VALUE(data_json, '$.available_on') AS INT64)
-        ) AS available_on,
-
-        raw_id
+        ) AS available_on
 
     FROM source
 )

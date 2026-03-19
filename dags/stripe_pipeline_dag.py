@@ -66,8 +66,9 @@ def load_data(resource):
     transformed = []
 
     for record in data:
+        print('recordvvvvvvvvvvvvv', record)
         row = transform_record(resource, record)
-
+        print('rowvvvvvvvvvvvvvvvv',row)
         if row:
             transformed.append(row)
 
