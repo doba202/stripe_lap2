@@ -117,7 +117,7 @@ parsed AS (
         JSON_VALUE(data_json, '$.transfer_data.destination') AS transfer_destination,
         JSON_VALUE(data_json, '$.transfer_group') AS transfer_group,
         JSON_VALUE(data_json, '$.source_transfer') AS source_transfer_id,
-        JSON_VALUE(data_json, '$.radar_options.session') AS radar_session_id
+        JSON_VALUE(data_json, '$.radar_options.session') AS radar_session_id,
         -- ===== CREATED =====
         TIMESTAMP_SECONDS(
             SAFE_CAST(JSON_VALUE(data_json, '$.created') AS INT64)

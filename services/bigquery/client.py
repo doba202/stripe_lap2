@@ -1,5 +1,9 @@
-from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
+from google.cloud import bigquery
 
-def get_client():
-    hook = BigQueryHook()
-    return hook.get_client()
+def get_client(project_id: str = None):
+    return bigquery.Client(project=project_id)
+
+def get_load_job_config(write_mode):
+    return bigquery.LoadJobConfig(
+        write_disposition=write_mode
+    )

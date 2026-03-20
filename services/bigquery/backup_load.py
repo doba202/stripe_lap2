@@ -1,11 +1,10 @@
-from .client import get_client, get_load_job_config
+from .client import get_client,get_load_job_config
 import pandas as pd
+from datetime import datetime
 import json
-
 def insert_raw(table_name, records, schema):
     client = get_client()
     rows = []
-
     for r in records:
         row = {}
         for field in schema:
@@ -14,7 +13,6 @@ def insert_raw(table_name, records, schema):
             mode = field.get("mode", "NULLABLE")
 
             value = r.get(name)
-
             # REPEATED
             if mode == "REPEATED":
                 if value is None:
@@ -22,6 +20,7 @@ def insert_raw(table_name, records, schema):
                 elif isinstance(value, list):
                     row[name] = [json.dumps(v, default=str) for v in value]
                 else:
+
                     row[name] = [json.dumps(value, default=str)]
                 continue
 
@@ -34,35 +33,10 @@ def insert_raw(table_name, records, schema):
                     row[name] = None
                 continue
 
-            # ===== FIX TYPE =====
-            if field_type == "INTEGER":
-                try:
-                    row[name] = int(value) if value not in (None, "") else None
-                except:
-                    row[name] = None
-
-            elif field_type == "FLOAT":
-                try:
-                    row[name] = float(value) if value not in (None, "") else None
-                except:
-                    row[name] = None
-
-            elif field_type == "BOOLEAN":
-                if isinstance(value, bool):
-                    row[name] = value
-                elif isinstance(value, str):
-                    row[name] = value.lower() in ("true", "1")
-                else:
-                    row[name] = None
-
-            else:
-                row[name] = value if value is not None else None
-
+            #  default
+            row[name] = value if value is not None else None
         rows.append(row)
-
     df = pd.DataFrame(rows)
-
-    print(df.dtypes)  # 👈 debug rất quan trọng
     print(f"Loading {len(df)} rows into {table_name}")
 
     job = client.load_table_from_dataframe(
@@ -74,3 +48,12 @@ def insert_raw(table_name, records, schema):
     job.result()
 
     print("Load completed")
+
+    # def write_append(df, table_name):
+    #     client = get_client()
+    #     job = client.load_table_from_dataframe(
+    #         df,
+    #         table_name,
+    #         job_config=get_query_job_config(table_name,"WRITE_TRUNCATE")
+    #     )
+    #     job.result()

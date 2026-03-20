@@ -26,7 +26,11 @@ parsed AS (
 
         TIMESTAMP_SECONDS(SAFE_CAST(JSON_VALUE(data_json, '$.current_period_end') AS INT64))
             AS current_period_end,
-
+        -- ===== BILLING THRESHOLDS =====
+        SAFE_CAST(
+            JSON_VALUE(data_json, '$.billing_thresholds.usage_gte')
+            AS INT64
+        ) AS billing_thresholds_usage_gte,
         -- ===== PLAN =====
         JSON_VALUE(data_json, '$.plan.id') AS plan_id,
         CAST(JSON_VALUE(data_json, '$.plan.active') AS BOOL) AS plan_active,

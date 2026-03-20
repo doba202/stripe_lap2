@@ -12,42 +12,34 @@ schedule_interval = Variable.get("schedule_interval", default_var='@daily')
 execution_timeout_minutes = Variable.get("execution_timeout_minutes", default_var=30)
 
 models = [
-    # ===== Core / base objects =====
-    "stripe_customers_stg",
-    "stripe_products_stg",
-    "stripe_prices_stg",
-    "stripe_plans_stg",
-
-    # ===== Payments & transactions =====
-    "stripe_payment_intents_stg",
-    "stripe_charges_stg",
-    "stripe_refunds_stg",
-    "stripe_balance_transactions_stg",
-    "stripe_balance_stg",
-
-    # ===== Subscriptions =====
-    "stripe_subscriptions_stg",
-    "stripe_subscription_items_stg",
-
-    # ===== Invoices (base first) =====
-    "stripe_invoices_stg",
-
-    # ===== Invoice components =====
-    "stripe_invoice_line_items_stg",
-    "stripe_invoice_line_item_taxes_stg",
-    "stripe_invoice_line_item_discounts_stg",
-
-    # ===== Invoice metadata =====
-    "stripe_invoice_customer_tax_ids_stg",
-    "stripe_invoice_default_tax_rates_stg",
-    "stripe_invoice_discounts_stg",
-
-    # ===== Invoice totals =====
-    "stripe_invoice_total_taxes_stg",
-    "stripe_invoice_total_discount_amounts_stg",
-
-    # ===== Invoice payments (final layer) =====
-    "stripe_invoice_payments_stg",
+"stripe_balance_stg",
+"stripe_balance_transactions_stg",
+"stripe_charges_payment_method_details_stg",
+"stripe_charges_stg",
+"stripe_customers_stg",
+"stripe_invoice_customer_tax_ids_stg",
+"stripe_invoice_default_tax_rates_stg",
+"stripe_invoice_discounts_stg",
+"stripe_invoice_line_item_discounts_stg",
+"stripe_invoice_line_item_taxes_stg",
+"stripe_invoice_line_items_stg",
+"stripe_invoice_payments_stg",
+"stripe_invoice_total_discount_amounts_stg",
+"stripe_invoice_total_taxes_stg",
+"stripe_invoices_stg",
+"stripe_payment_intents_stg",
+"stripe_plans_stg",
+"stripe_prices_stg",
+"stripe_products_stg",
+"stripe_refunds_stg",
+"stripe_subscription_default_tax_rates_stg",
+"stripe_subscription_discounts_stg",
+"stripe_subscription_invoice_account_tax_ids_stg",
+"stripe_subscription_item_discounts",
+"stripe_subscription_item_tax_rates_stg",
+"stripe_subscription_items_stg",
+"stripe_subscription_payment_settings_stg",
+"stripe_subscriptions_stg"
 ]
 
 with DAG(
@@ -57,7 +49,7 @@ with DAG(
         'owner': 'stripe',
         'start_date': datetime(2026, 1, 1),
         "pool": "default_pool",
-        'retries': 1,
+        'retries': 2,
         'retry_delay': timedelta(minutes=1),
         'execution_timeout': timedelta(minutes=int(execution_timeout_minutes))
     },

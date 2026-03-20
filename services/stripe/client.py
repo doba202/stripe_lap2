@@ -1,14 +1,31 @@
 import requests
-import os
+from airflow.models import Variable
+from datetime import datetime,timedelta
 from .config import ENDPOINT_RULES
+from services.common.time_window import build_time_window
 BASE_URL = "https://api.stripe.com/v1"
 
 class StripeClient:
     def __init__(self, api_key=None):
         self.api_key = api_key
 
-    def get(self, endpoint, params=None):
-        print('api_key',self.api_key)
+    def _get_lookback_days(self, mode_conf):
+        # ưu tiên Airflow Variable
+        try:
+
+            return int(Variable.get("stripe_lookback_days"))
+        except:
+            pass
+
+        # fallback config
+        if mode_conf.get("lookback_days"):
+            return mode_conf["lookback_days"]
+
+        # default
+        return 3
+
+    def _get(self, endpoint, params=None):
+        print('[REQUEST]', endpoint, params)
         response = requests.get(
             f"{BASE_URL}/{endpoint}",
             auth=(self.api_key, ""),
@@ -17,74 +34,92 @@ class StripeClient:
         response.raise_for_status()
         return response.json()
 
-    def get_all(self, resource, params=None):
+    def _fetch_by_rule(self, resource, params=None):
         rule = ENDPOINT_RULES.get(resource)
-        print('self',resource, params,self.api_key)
+
         if not rule:
             raise ValueError(f"No rule defined for {resource}")
 
         endpoint = resource
 
-        #  SINGLETON → gọi 1 lần
+        # 👉 1. SINGLETON
         if rule["type"] == "singleton":
-            print(f"[SINGLETON] Fetching {resource}")
-            return self.get(endpoint)
+            print(f"[SINGLETON] {resource}")
+            return self._get(endpoint, params=params)
 
-        #  LIST → pagination
+        # 👉 2. LIST nhưng KHÔNG pagination
+        if not rule.get("pagination"):
+            print(f"[LIST NO PAGINATION] {resource}")
+            response = self._get(endpoint, params=params)
+            return response.get("data", [])
+
+        # 👉 3. LIST + pagination
+        print(f"[PAGINATED] {resource}")
+
         all_data = []
         starting_after = None
 
         while True:
             query = dict(params or {})
 
-            # chỉ add limit nếu endpoint support
+            #  limit từ config
             if rule.get("limit"):
-                query["limit"] = 20
+                query["limit"] = rule.get("page_size", 50)
 
             if starting_after:
                 query["starting_after"] = starting_after
 
-            response = self.get(endpoint, params=query)
+            response = self._get(endpoint, params=query)
 
             data = response.get("data", [])
-            print(f"Fetched {len(data)} | has_more={response.get('has_more')}")
+            has_more = response.get("has_more", False)
+
+            print(f"[PAGE] {len(data)} records | has_more={has_more}")
 
             if not data:
                 break
 
             all_data.extend(data)
 
-            if not rule.get("pagination") or not response.get("has_more"):
+            # 👉 stop condition
+            if not has_more:
                 break
 
+            #  Stripe pagination cursor
             starting_after = data[-1].get("id")
+
+            # 👉 safety (tránh loop vô hạn nếu API lỗi)
+            if not starting_after:
+                print("[WARN] Missing 'id' for pagination, stopping")
+                break
 
         return all_data
 
-    def fetch(self, resource, mode="init", start=None, end=None, params=None):
+    def fetch(self, resource, mode="daily", context=None, params=None):
         rule = ENDPOINT_RULES.get(resource)
-        if not rule:
-            raise ValueError(f"No rule defined for {resource}")
-
         mode_conf = rule["modes"].get(mode)
-        if not mode_conf:
-            raise ValueError(f"{resource} does not support mode {mode}")
 
-        strategy = mode_conf.get("strategy")
-        print('sssss',strategy,mode_conf)
-        final_params = dict(params or {})
+        #  lấy time window từ util
+        time_window = build_time_window(context, mode_conf)
+        start = time_window["start"]
+        end = time_window["end"]
+        print('time_window',time_window)
+        #  build params từ config
+        config_params = mode_conf.get("params", {})
+        final_params = {}
 
-        # 👉 incremental (daily)
-        if strategy == "incremental":
-            field = mode_conf["range_field"]
+        for k, v in config_params.items():
+            if isinstance(v, str):
+                if "{start}" in v:
+                    final_params[k] = start
+                elif "{end}" in v:
+                    final_params[k] = end
+            else:
+                final_params[k] = v
 
-            range_filter = {}
-            if start:
-                range_filter["gt"] = start
-            if end:
-                range_filter["lte"] = end
+        if params:
+            final_params.update(params)
 
-            if range_filter:
-                final_params[field] = range_filter
+        print("[FETCH PARAMS]", final_params)
 
-        # return self.get_all(resource, params=final_params)
+        return self._fetch_by_rule(resource, params=final_params)

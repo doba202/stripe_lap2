@@ -1,11 +1,28 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from datetime import datetime
+from datetime import datetime,timedelta
 from services.stripe.client import StripeClient
 from services.stripe.config import STRIPE_RESOURCES,STRIPE_ACCOUNTS
 from services.bigquery.loader import insert_raw
 from services.bigquery.config import TABLE_CONFIG,DATASET,PROJECT_ID
+from services.bigquery.repository import delete_by_time_range,delete_all,get_table_name
+from services.common.time_window import build_time_window
 
+
+def get_run_mode(context, default="daily"):
+    dag_run = context.get("dag_run")
+
+    if not dag_run:
+        print(f"[MODE] No dag_run → default={default}")
+        return default
+
+    conf = dag_run.conf or {}
+
+    mode = conf.get("run_mode", default)
+
+    print(f"[MODE] {mode}")
+
+    return mode
 
 def transform_record(resource, record,open_id):
     config = TABLE_CONFIG.get(resource)
@@ -54,19 +71,43 @@ def transform_record(resource, record,open_id):
 
     return row
 
-def start():
-
+def start(**context):
     print("Start pipeline...")
 
-def load_data(resource):
+
+def delete_task(resource, **context):
+
+
+    config = TABLE_CONFIG[resource]
+
+    table_name = get_table_name(resource)
+    print('test',table_name,get_run_mode(context))
+    print('test2',config)
+    if get_run_mode(context) == "init":
+        delete_all(table_name)
+        return
+    elif get_run_mode(context) == "daily":
+        time_window = build_time_window(context)
+        print('time_window',time_window["start"],time_window["end"])
+        delete_by_time_range(
+            table_name,
+            time_window["start"],
+            time_window["end"]
+        )
+
+
+
+def load_data(resource,**context):
+    mode = get_run_mode(context)
     for account in STRIPE_ACCOUNTS:
+        print(account)
         client = StripeClient(account["api_key"])
         print(f"Loading {resource}...")
-        data = client.get_all(resource)
-        print("data",data)
+        data = client.fetch(resource,mode)
+        print("data_fetch",data)
         if not data:
             print(f"No data for {resource}")
-            return
+            continue
         # normalize về list
         if isinstance(data, dict):
             data = [data]
@@ -78,7 +119,7 @@ def load_data(resource):
                 transformed.append(row)
         if not transformed:
             print(f"No transformed data for {resource}")
-            return
+            continue
 
         print(f"Transformed {len(transformed)} records")
         print('transformed',transformed)
@@ -104,14 +145,19 @@ with DAG(
         python_callable=start
     )
 
-    tasks = []
 
     for resource in STRIPE_RESOURCES:
-        task = PythonOperator(
+        delete = PythonOperator(
+            task_id=f"delete_{resource}",
+            python_callable=delete_task,
+            op_args=[resource]
+        )
+
+        load = PythonOperator(
             task_id=f"load_{resource}",
             python_callable=load_data,
             op_args=[resource]
         )
 
-        start_task >> task
-        tasks.append(task)
+        # flow: start → delete → load
+        start_task >> delete >> load

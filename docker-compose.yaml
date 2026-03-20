@@ -76,6 +76,8 @@ x-airflow-common:
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
     _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-http apache-airflow-providers-google==10.1.0 apache-airflow-providers-airbyte==3.3.0 apache-airflow-providers-airbyte Jinja2 dbt-core dbt-bigquery dbt-postgres fsspec networkx varname gcsfs gspread discord-webhook seaborn scikit-learn mlxtend clickhouse-connect'
+    AIRFLOW__WEBSERVER__SHOW_TRIGGER_FORM_IF_NO_PARAMS: True
+    GOOGLE_APPLICATION_CREDENTIALS: '/opt/airflow/credential_config/service-account.json'
     AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT: 'google-cloud-platform://?extra__google_cloud_platform__key_path=/opt/airflow/credential_config/service-account.json'
   volumes:
     - ./credential_config:/opt/airflow/credential_config

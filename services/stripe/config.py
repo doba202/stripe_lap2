@@ -13,7 +13,10 @@ LIST_CREATED_RULE = {
         },
         "daily": {
             "strategy": "incremental",
-            "range_field": "created"
+            "params": {
+                "created[gte]": "{start}",
+                "created[lte]": "{end}"
+            }
         }
     }
 }
@@ -40,11 +43,9 @@ ENDPOINT_RULES = {
     "prices": LIST_CREATED_RULE,
     "products": LIST_CREATED_RULE,
     "subscriptions": LIST_CREATED_RULE,
+    #"subscription_items": LIST_CREATED_RULE,
     "refunds": LIST_CREATED_RULE,
     "balance_transactions": LIST_CREATED_RULE,
     "balance": LIST_SNAPSHOT_RULE
 }
-STRIPE_RESOURCES = [
-    "customers", "subscriptions", "invoices", "charges", "payment_intents",
-    "plans", "prices", "products", "refunds", "balance_transactions", "balance"
-]
+STRIPE_RESOURCES = list(ENDPOINT_RULES.keys())
