@@ -33,7 +33,7 @@ parsed AS (
         SAFE_CAST(JSON_VALUE(data_json, '$.amount') AS INT64) AS amount,
         SAFE_CAST(JSON_VALUE(data_json, '$.amount_captured') AS INT64) AS amount_captured,
         SAFE_CAST(JSON_VALUE(data_json, '$.amount_refunded') AS INT64) AS amount_refunded,
-
+        SAFE_CAST(JSON_VALUE(data_json, '$.transfer_data.amount') AS INT64) AS transfer_amount,
         JSON_VALUE(data_json, '$.currency') AS currency,
 
         -- ===== STATUS =====
@@ -52,19 +52,11 @@ parsed AS (
 
         -- ===== PAYMENT METHOD =====
         JSON_VALUE(data_json, '$.payment_method') AS payment_method_id,
-        JSON_VALUE(data_json, '$.payment_method_details.type') AS payment_method_type,
-
-        -- ===== CARD INFO =====
-        JSON_VALUE(data_json, '$.payment_method_details.card.brand') AS card_brand,
-        JSON_VALUE(data_json, '$.payment_method_details.card.funding') AS card_funding,
-        JSON_VALUE(data_json, '$.payment_method_details.card.country') AS card_country,
-        JSON_VALUE(data_json, '$.payment_method_details.card.network') AS card_network,
-
-        -- ===== CARD CHECKS =====
-        JSON_VALUE(data_json, '$.payment_method_details.card.checks.cvc_check') AS card_cvc_check,
-        JSON_VALUE(data_json, '$.payment_method_details.card.checks.address_postal_code_check')
-            AS card_postal_check,
-
+        -- ===== PRESENTMENT (FX / DISPLAY CURRENCY) =====
+        SAFE_CAST(JSON_VALUE(data_json, '$.presentment_details.presentment_amount') AS INT64)
+            AS presentment_amount,
+        JSON_VALUE(data_json, '$.presentment_details.presentment_currency')
+            AS presentment_currency,
         -- ===== BILLING =====
         JSON_VALUE(data_json, '$.billing_details.name') AS billing_name,
         JSON_VALUE(data_json, '$.billing_details.email') AS billing_email,
@@ -101,21 +93,31 @@ parsed AS (
         -- ===== FAILURE =====
         JSON_VALUE(data_json, '$.failure_code') AS failure_code,
         JSON_VALUE(data_json, '$.failure_message') AS failure_message,
-
+        -- ===== REVIEW =====
+        JSON_VALUE(data_json, '$.review') AS review_id,
 
         -- ===== FRAUD =====
         JSON_VALUE(data_json, '$.fraud_details.user_report') AS fraud_user_report,
         JSON_VALUE(data_json, '$.fraud_details.stripe_report') AS fraud_stripe_report,
+        -- ===== SHIPPING =====
+        JSON_VALUE(data_json, '$.shipping.name') AS shipping_name,
+        JSON_VALUE(data_json, '$.shipping.phone') AS shipping_phone,
+        JSON_VALUE(data_json, '$.shipping.carrier') AS shipping_carrier,
+        JSON_VALUE(data_json, '$.shipping.tracking_number') AS shipping_tracking_number,
 
-        -- ===== REFUND INFO =====
-        JSON_VALUE(data_json, '$.refunds.url') AS refunds_url,
-        CAST(JSON_VALUE(data_json, '$.refunds.has_more') AS BOOL) AS refunds_has_more,
-
+        -- ===== SHIPPING ADDRESS =====
+        JSON_VALUE(data_json, '$.shipping.address.city') AS shipping_city,
+        JSON_VALUE(data_json, '$.shipping.address.country') AS shipping_country,
+        JSON_VALUE(data_json, '$.shipping.address.line1') AS shipping_line1,
+        JSON_VALUE(data_json, '$.shipping.address.line2') AS shipping_line2,
+        JSON_VALUE(data_json, '$.shipping.address.postal_code') AS shipping_postal_code,
+        JSON_VALUE(data_json, '$.shipping.address.state') AS shipping_state,
         -- ===== CONNECT =====
         JSON_VALUE(data_json, '$.on_behalf_of') AS on_behalf_of,
         JSON_VALUE(data_json, '$.transfer_data.destination') AS transfer_destination,
         JSON_VALUE(data_json, '$.transfer_group') AS transfer_group,
-
+        JSON_VALUE(data_json, '$.source_transfer') AS source_transfer_id,
+        JSON_VALUE(data_json, '$.radar_options.session') AS radar_session_id
         -- ===== CREATED =====
         TIMESTAMP_SECONDS(
             SAFE_CAST(JSON_VALUE(data_json, '$.created') AS INT64)

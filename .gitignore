@@ -5,3 +5,6 @@ dbts/target/
 dbts/dbt_packages/
 .env
 .idea/
+__pycache__/
+*.pyc
+*.pyo
