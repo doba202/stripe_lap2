@@ -1,6 +1,8 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.models import Variable
 from datetime import datetime,timedelta
+import json
 from services.stripe.client import StripeClient
 from services.bigquery.loader import insert_raw
 from services.common.config import TABLE_CONFIG,DATASET,PROJECT_ID,STRIPE_RESOURCES,STRIPE_ACCOUNTS
@@ -22,6 +24,21 @@ def get_run_mode(context, default="daily"):
     print(f"[MODE] {mode}")
 
     return mode
+
+def get_open_id_filter():
+    raw_value = Variable.get("STRIPE_OPEN_ID_FILTER", default_var="").strip()
+    if not raw_value:
+        return set()
+
+    # Support JSON array or CSV string for easier runtime config.
+    try:
+        parsed = json.loads(raw_value)
+        if isinstance(parsed, list):
+            return {str(item).strip() for item in parsed if str(item).strip()}
+    except json.JSONDecodeError:
+        pass
+
+    return {value.strip() for value in raw_value.split(",") if value.strip()}
 
 def transform_record(resource, record,open_id):
     config = TABLE_CONFIG.get(resource)
@@ -99,7 +116,18 @@ def delete_task(resource, **context):
 
 def load_data(resource,**context):
     mode = get_run_mode(context)
+    open_id_filter = get_open_id_filter()
+    if open_id_filter:
+        print(f"Filter enabled by Airflow Variable STRIPE_OPEN_ID_FILTER: {sorted(open_id_filter)}")
+    else:
+        print("No open_id filter configured; process all accounts.")
+
     for account in STRIPE_ACCOUNTS:
+        open_id = account.get("openid") or account.get("open_id")
+        if open_id_filter and open_id not in open_id_filter:
+            print(f"Skip account open_id={open_id} by STRIPE_OPEN_ID_FILTER")
+            continue
+
         print(account)
         client = StripeClient(account["api_key"])
         print(f"Loading {resource}...")
@@ -114,7 +142,7 @@ def load_data(resource,**context):
         print(f"Fetched {len(data)} records")
         transformed = []
         for record in data:
-            row = transform_record(resource, record,account["openid"])
+            row = transform_record(resource, record, open_id)
             if row:
                 transformed.append(row)
         if not transformed:
