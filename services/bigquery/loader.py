@@ -1,74 +1,18 @@
 from .client import get_client, get_load_job_config
-import pandas as pd
-import json
 
 def insert_raw(table_name, records, schema):
     client = get_client()
-    rows = []
 
-    for r in records:
-        row = {}
-        for field in schema:
-            name = field["name"]
-            field_type = field.get("type")
-            mode = field.get("mode", "NULLABLE")
+    # records = list dict (giữ nguyên)
+    rows = [
+        {field["name"]: r.get(field["name"]) for field in schema}
+        for r in records
+    ]
 
-            value = r.get(name)
-
-            # REPEATED
-            if mode == "REPEATED":
-                if value is None:
-                    row[name] = []
-                elif isinstance(value, list):
-                    row[name] = [json.dumps(v, default=str) for v in value]
-                else:
-                    row[name] = [json.dumps(value, default=str)]
-                continue
-
-            # JSON
-            if field_type == "JSON":
-                try:
-                    row[name] = json.dumps(value, default=str) if value is not None else None
-                except Exception as e:
-                    print("JSON serialize error:", e)
-                    row[name] = None
-                continue
-
-            # ===== FIX TYPE =====
-            if field_type == "INTEGER":
-                try:
-                    row[name] = int(value) if value not in (None, "") else None
-                except:
-                    row[name] = None
-
-            elif field_type == "FLOAT":
-                try:
-                    row[name] = float(value) if value not in (None, "") else None
-                except:
-                    row[name] = None
-
-            elif field_type == "BOOLEAN":
-                if isinstance(value, bool):
-                    row[name] = value
-                elif isinstance(value, str):
-                    row[name] = value.lower() in ("true", "1")
-                else:
-                    row[name] = None
-
-            else:
-                row[name] = value if value is not None else None
-
-        rows.append(row)
-
-    df = pd.DataFrame(rows)
-
-    print(df.dtypes)  # 👈 debug rất quan trọng
-    print(f"Loading {len(df)} rows into {table_name}")
-
-    job = client.load_table_from_dataframe(
-        df,
+    job = client.load_table_from_json(
+        rows,
         table_name,
-        job_config=get_load_job_config("WRITE_APPEND")
+        job_config=get_load_job_config("WRITE_APPEND", schema)
     )
 
     job.result()

@@ -2,9 +2,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime,timedelta
 from services.stripe.client import StripeClient
-from services.stripe.config import STRIPE_RESOURCES,STRIPE_ACCOUNTS
 from services.bigquery.loader import insert_raw
-from services.bigquery.config import TABLE_CONFIG,DATASET,PROJECT_ID
+from services.common.config import TABLE_CONFIG,DATASET,PROJECT_ID,STRIPE_RESOURCES,STRIPE_ACCOUNTS
 from services.bigquery.repository import delete_by_time_range,delete_all,get_table_name
 from services.common.time_window import build_time_window
 
@@ -92,7 +91,8 @@ def delete_task(resource, **context):
         delete_by_time_range(
             table_name,
             time_window["start"],
-            time_window["end"]
+            time_window["end"],
+            time_field=config["time_field"]
         )
 
 

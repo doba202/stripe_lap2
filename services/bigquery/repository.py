@@ -17,10 +17,9 @@ def delete_all(table_name):
 
     print(f"[DELETE DONE] {table_name}")
 
-def delete_by_time_range(table_name, start_ts, end_ts):
+def delete_by_time_range(table_name, start_ts, end_ts, time_field):
     client = get_client()
 
-    # 👉 validate
     if start_ts is None or end_ts is None:
         raise ValueError("start_ts and end_ts are required")
 
@@ -32,11 +31,12 @@ def delete_by_time_range(table_name, start_ts, end_ts):
 
     query = f"""
     DELETE FROM `{table_name}`
-    WHERE created_at >= DATETIME(TIMESTAMP_SECONDS({start_ts}))
-      AND created_at <= DATETIME(TIMESTAMP_SECONDS({end_ts}))
+    WHERE {time_field} >= DATETIME(TIMESTAMP_SECONDS({start_ts}))
+      AND {time_field} <= DATETIME(TIMESTAMP_SECONDS({end_ts}))
     """
 
     print(f"[DELETE RANGE] {start_ts} → {end_ts}")
+    print(f"[TIME FIELD] {time_field}")
     print("[QUERY]", query)
 
     job = client.query(query)

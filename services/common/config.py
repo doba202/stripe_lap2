@@ -6,6 +6,7 @@ DATASET = "doba_dev"
 TABLE_CONFIG = {
     "customers": {
         "mode": "json",
+        "time_field": "created_at",
         "schema": [
             {"name": "id", "type": "STRING"},
             {"name": "open_id", "type": "STRING"},
@@ -16,6 +17,7 @@ TABLE_CONFIG = {
     },
     "subscriptions": {
         "mode": "json",
+        "time_field": "created_at",
         "schema": [
             {"name": "id", "type": "STRING"},
             {"name": "open_id", "type": "STRING"},
@@ -26,6 +28,7 @@ TABLE_CONFIG = {
     },
     "invoices": {
             "mode": "json",
+            "time_field": "created_at",
             "schema": [
                 {"name": "id", "type": "STRING"},
                 {"name": "open_id", "type": "STRING"},
@@ -36,6 +39,7 @@ TABLE_CONFIG = {
     },
     "charges": {
                 "mode": "json",
+                "time_field": "created_at",
                 "schema": [
                     {"name": "id", "type": "STRING"},
                     {"name": "open_id", "type": "STRING"},
@@ -46,6 +50,7 @@ TABLE_CONFIG = {
     },
     "payment_intents": {
                     "mode": "json",
+                    "time_field": "created_at",
                     "schema": [
                         {"name": "id", "type": "STRING"},
                         {"name": "open_id", "type": "STRING"},
@@ -56,6 +61,7 @@ TABLE_CONFIG = {
     },
     "plans": {
                 "mode": "json",
+                "time_field": "created_at",
                 "schema": [
                     {"name": "id", "type": "STRING"},
                     {"name": "open_id", "type": "STRING"},
@@ -66,6 +72,7 @@ TABLE_CONFIG = {
     },
     "products": {
                 "mode": "json",
+                "time_field": "created_at",
                 "schema": [
                     {"name": "id", "type": "STRING"},
                     {"name": "open_id", "type": "STRING"},
@@ -76,6 +83,7 @@ TABLE_CONFIG = {
     },
     "refunds": {
                     "mode": "json",
+                    "time_field": "created_at",
                     "schema": [
                         {"name": "id", "type": "STRING"},
                         {"name": "open_id", "type": "STRING"},
@@ -86,6 +94,7 @@ TABLE_CONFIG = {
     },
     "prices": {
         "mode": "json",
+        "time_field": "created_at",
         "schema": [
             {"name": "id", "type": "STRING"},
             {"name": "open_id", "type": "STRING"},
@@ -96,6 +105,7 @@ TABLE_CONFIG = {
     },
     "balance_transactions": {
                         "mode": "json",
+                        "time_field": "created_at",
                         "schema": [
                             {"name": "id", "type": "STRING"},
                             {"name": "open_id", "type": "STRING"},
@@ -106,6 +116,7 @@ TABLE_CONFIG = {
     },
     "subscription_items": {
                             "mode": "json",
+                            "time_field": "created_at",
                             "schema": [
                                 {"name": "id", "type": "STRING"},
                                 {"name": "open_id", "type": "STRING"},
@@ -116,12 +127,14 @@ TABLE_CONFIG = {
     },
     "balance": {
         "mode": "structured",
+        "time_field": "call_at",
         "schema": [
             {"name": "open_id", "type": "STRING"},
             {"name": "call_at", "type": "DATETIME"},
             {"name": "available", "type": "JSON", "mode": "REPEATED"},
             {"name": "pending", "type": "JSON", "mode": "REPEATED"},
-            {"name": "refund_and_dispute_prefunding", "type": "JSON", "mode": "REPEATED"},
+            {"name": "connect_reserved", "type": "JSON", "mode": "REPEATED"},
+            {"name": "refund_and_dispute_prefunding", "type": "JSON"},
         ]
     }
 }

@@ -2,7 +2,7 @@ from .client import get_client,get_load_job_config
 import pandas as pd
 from datetime import datetime
 import json
-def insert_raw(table_name, records, schema):
+def insert_raw2(table_name, records, schema):
     client = get_client()
     rows = []
     for r in records:
