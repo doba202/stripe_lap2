@@ -7,14 +7,14 @@ from datetime import datetime
 
 from airflow.models import Variable
 
-from services.bigquery.loader import insert_raw
-from services.bigquery.repository import delete_all, delete_by_time_range, get_table_name
+from services.bigquery.repository import delete_all, delete_by_time_range, get_table_name, insert_raw
 from services.common.config import (
     DATASET,
     ENDPOINT_RULES,
     PROJECT_ID,
     STRIPE_ACCOUNTS,
     TABLE_CONFIG,
+    STRIPE_RESOURCES
 )
 from services.common.time_window import build_time_window
 from services.stripe.client import StripeClient
@@ -97,12 +97,12 @@ def get_child_resources(resource):
     return rule.get("children", [])
 
 
-def delete_resource_by_mode(resource, mode, context):
+def delete_resource_by_mode(resource, mode, context, open_id_filter=None):
     config = TABLE_CONFIG[resource]
     table_name = get_table_name(resource)
 
     if mode == "init":
-        delete_all(table_name)
+        delete_all(table_name, open_ids=open_id_filter)
         return
 
     if mode == "daily":
@@ -113,6 +113,7 @@ def delete_resource_by_mode(resource, mode, context):
             time_window["start"],
             time_window["end"],
             time_field=config["time_field"],
+            open_ids=open_id_filter
         )
 
 
@@ -122,10 +123,11 @@ def start(**context):
 
 def delete_task(resource, **context):
     mode = get_run_mode(context)
-    delete_resource_by_mode(resource, mode, context)
+    open_id_filter = get_open_id_filter()
+    delete_resource_by_mode(resource, mode, context, open_id_filter)
     for child_resource in get_child_resources(resource):
         print(f"Delete child resource={child_resource} with parent resource={resource}")
-        delete_resource_by_mode(child_resource, mode, context)
+        delete_resource_by_mode(child_resource, mode, context, open_id_filter)
 
 
 def load_data(resource, **context):
@@ -137,16 +139,14 @@ def load_data(resource, **context):
         print("No open_id filter configured; process all accounts.")
 
     for account in STRIPE_ACCOUNTS:
-        open_id = account.get("openid") or account.get("open_id")
+        open_id = account.get("open_id")
         if open_id_filter and open_id not in open_id_filter:
             print(f"Skip account open_id={open_id} by STRIPE_OPEN_ID_FILTER")
             continue
 
-        print(account)
         client = StripeClient(account["api_key"])
         print(f"Loading {resource}...")
         data = client.fetch(resource, mode, context=context)
-        print("data_fetch", data)
         if not data:
             print(f"No data for {resource}")
             continue

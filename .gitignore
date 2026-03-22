@@ -8,3 +8,4 @@ dbts/dbt_packages/
 __pycache__/
 *.pyc
 *.pyo
+*.aiexclude
