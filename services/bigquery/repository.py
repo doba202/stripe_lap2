@@ -1,5 +1,5 @@
 from services.bigquery.client import get_client
-from services.common.config import PROJECT_ID, DATASET
+from services.common.config import DATASET, PROJECT_ID
 
 def get_table_name(resource):
     return f"{PROJECT_ID}.{DATASET}.stripe_raw_{resource}"
@@ -9,7 +9,7 @@ def delete_all(table_name):
 
     query = f"DELETE FROM `{table_name}` WHERE TRUE"
 
-    print("⚠️ [DELETE ALL]")
+    print(" [DELETE ALL]")
     print("[QUERY]", query)
 
     job = client.query(query)

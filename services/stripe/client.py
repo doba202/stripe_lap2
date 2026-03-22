@@ -1,9 +1,8 @@
 import requests
 from airflow.models import Variable
 from datetime import datetime,timedelta
-from .config import ENDPOINT_RULES
+from services.common.config import BASE_URL, ENDPOINT_RULES
 from services.common.time_window import build_time_window
-BASE_URL = "https://api.stripe.com/v1"
 
 class StripeClient:
     def __init__(self, api_key=None):
