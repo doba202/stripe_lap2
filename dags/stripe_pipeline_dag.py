@@ -2,9 +2,14 @@ from datetime import datetime
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
-from services.common.config import STRIPE_RESOURCES
-from services.pipeline.stripe_airflow import delete_task, load_data, start
+from services.pipeline.stripe_airflow import (
+    start,
+    delete_all_resources,
+    load_all_data,
+    end,
+)
 
 
 with DAG(
@@ -19,17 +24,25 @@ with DAG(
         python_callable=start,
     )
 
-    for resource in STRIPE_RESOURCES:
-        delete = PythonOperator(
-            task_id=f"delete_{resource}",
-            python_callable=delete_task,
-            op_args=[resource],
-        )
+    delete_task = PythonOperator(
+        task_id="delete",
+        python_callable=delete_all_resources,
+    )
 
-        load = PythonOperator(
-            task_id=f"load_{resource}",
-            python_callable=load_data,
-            op_args=[resource],
-        )
+    load_task = PythonOperator(
+        task_id="loader",
+        python_callable=load_all_data,
+    )
 
-        start_task >> delete >> load
+    end_task = PythonOperator(
+        task_id="end",
+        python_callable=end,
+    )
+
+    trigger_dbt = TriggerDagRunOperator(
+        task_id="trigger_dbt",
+        trigger_dag_id="stripe_test_dag",
+        wait_for_completion=False,
+    )
+
+    start_task >> delete_task >> load_task >> end_task >> trigger_dbt
