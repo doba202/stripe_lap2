@@ -121,21 +121,7 @@ def start(**context):
     print("Start pipeline...")
 
 
-def delete_all_resources(**context):
-    mode = get_run_mode(context)
-    open_id_filter = get_open_id_filter()
-
-    for resource in STRIPE_RESOURCES:
-        print(f"=== Deleting {resource} ===")
-        delete_resource_by_mode(resource, mode, context, open_id_filter)
-        for child_resource in get_child_resources(resource):
-            print(f"Delete child resource={child_resource} with parent resource={resource}")
-            delete_resource_by_mode(child_resource, mode, context, open_id_filter)
-
-    print("All deletes completed.")
-
-
-def load_all_data(**context):
+def process_all_resources(**context):
     mode = get_run_mode(context)
     open_id_filter = get_open_id_filter()
     if open_id_filter:
@@ -144,10 +130,18 @@ def load_all_data(**context):
         print("No open_id filter configured; process all accounts.")
 
     for resource in STRIPE_RESOURCES:
-        print(f"\n=== Loading {resource} ===")
+        print(f"\n=== Processing {resource} ===")
+
+        # Delete
+        delete_resource_by_mode(resource, mode, context, open_id_filter)
+        for child_resource in get_child_resources(resource):
+            print(f"Delete child resource={child_resource} with parent resource={resource}")
+            delete_resource_by_mode(child_resource, mode, context, open_id_filter)
+
+        # Load
         _load_resource(resource, mode, open_id_filter, context)
 
-    print("All loads completed.")
+    print("All resources processed.")
 
 
 def _load_resource(resource, mode, open_id_filter, context):

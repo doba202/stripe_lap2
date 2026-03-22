@@ -6,8 +6,7 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 from services.pipeline.stripe_airflow import (
     start,
-    delete_all_resources,
-    load_all_data,
+    process_all_resources,
     end,
 )
 
@@ -24,14 +23,9 @@ with DAG(
         python_callable=start,
     )
 
-    delete_task = PythonOperator(
-        task_id="delete",
-        python_callable=delete_all_resources,
-    )
-
-    load_task = PythonOperator(
-        task_id="loader",
-        python_callable=load_all_data,
+    process_task = PythonOperator(
+        task_id="process",
+        python_callable=process_all_resources,
     )
 
     end_task = PythonOperator(
@@ -45,4 +39,4 @@ with DAG(
         wait_for_completion=False,
     )
 
-    start_task >> delete_task >> load_task >> end_task >> trigger_dbt
+    start_task >> process_task >> end_task >> trigger_dbt
