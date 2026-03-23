@@ -1,11 +1,64 @@
+# =========================
+# Credentials & secrets
+# =========================
 credential_config/
+.env
+.env.*
+*.key
+*.json
+
+# =========================
+# Logs
+# =========================
 logs/
+*.log
+
+# Airflow logs (nếu có)
+airflow/logs/
+
+# =========================
+# dbt
+# =========================
 dbts/logs/
 dbts/target/
 dbts/dbt_packages/
-.env
-.idea/
+
+# =========================
+# Python cache (QUAN TRỌNG NHẤT)
+# =========================
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+
+# =========================
+# Virtual env
+# =========================
+venv/
+.venv/
+env/
+
+# =========================
+# IDE / Editor
+# =========================
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Build / temp
+# =========================
+dist/
+build/
+*.egg-info/
+
+# =========================
+# Custom
+# =========================
 *.aiexclude
