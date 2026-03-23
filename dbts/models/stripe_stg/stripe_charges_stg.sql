@@ -42,9 +42,9 @@ parsed AS (
         CAST(JSON_VALUE(data_json, '$.captured') AS BOOL) AS is_captured,
         CAST(JSON_VALUE(data_json, '$.refunded') AS BOOL) AS is_refunded,
         CAST(JSON_VALUE(data_json, '$.disputed') AS BOOL) AS is_disputed,
-        -- ===== STATEMENT DESCRIPTOR (CALCULATED) =====
+
+        -- ===== STATEMENT DESCRIPTOR =====
         JSON_VALUE(data_json, '$.calculated_statement_descriptor') AS calculated_statement_descriptor,
-        -- ===== DESCRIPTION =====
         JSON_VALUE(data_json, '$.description') AS description,
         JSON_VALUE(data_json, '$.destination') AS destination,
         JSON_VALUE(data_json, '$.statement_descriptor') AS statement_descriptor,
@@ -52,11 +52,15 @@ parsed AS (
 
         -- ===== PAYMENT METHOD =====
         JSON_VALUE(data_json, '$.payment_method') AS payment_method_id,
+        -- Giữ payment_method_type ở bảng chính để quick filter
+        JSON_VALUE(data_json, '$.payment_method_details.type') AS payment_method_type,
+
         -- ===== PRESENTMENT (FX / DISPLAY CURRENCY) =====
         SAFE_CAST(JSON_VALUE(data_json, '$.presentment_details.presentment_amount') AS INT64)
             AS presentment_amount,
         JSON_VALUE(data_json, '$.presentment_details.presentment_currency')
             AS presentment_currency,
+
         -- ===== BILLING =====
         JSON_VALUE(data_json, '$.billing_details.name') AS billing_name,
         JSON_VALUE(data_json, '$.billing_details.email') AS billing_email,
@@ -68,6 +72,7 @@ parsed AS (
         JSON_VALUE(data_json, '$.billing_details.address.line1') AS billing_line1,
         JSON_VALUE(data_json, '$.billing_details.address.line2') AS billing_line2,
         JSON_VALUE(data_json, '$.billing_details.address.postal_code') AS billing_postal_code,
+        JSON_VALUE(data_json, '$.billing_details.address.state') AS billing_state,
 
         -- ===== RECEIPT =====
         JSON_VALUE(data_json, '$.receipt_email') AS receipt_email,
@@ -77,51 +82,56 @@ parsed AS (
         -- ===== OUTCOME =====
         JSON_VALUE(data_json, '$.outcome.type') AS outcome_type,
         JSON_VALUE(data_json, '$.outcome.reason') AS outcome_reason,
-
         JSON_VALUE(data_json, '$.outcome.network_status') AS outcome_network_status,
         JSON_VALUE(data_json, '$.outcome.network_advice_code') AS network_advice_code,
         JSON_VALUE(data_json, '$.outcome.network_decline_code') AS network_decline_code,
-
         JSON_VALUE(data_json, '$.outcome.advice_code') AS outcome_advice_code,
-
         JSON_VALUE(data_json, '$.outcome.risk_level') AS outcome_risk_level,
         SAFE_CAST(JSON_VALUE(data_json, '$.outcome.risk_score') AS INT64) AS outcome_risk_score,
-
         JSON_VALUE(data_json, '$.outcome.rule') AS outcome_rule_id,
         JSON_VALUE(data_json, '$.outcome.seller_message') AS outcome_seller_message,
 
         -- ===== FAILURE =====
         JSON_VALUE(data_json, '$.failure_code') AS failure_code,
         JSON_VALUE(data_json, '$.failure_message') AS failure_message,
+
         -- ===== REVIEW =====
         JSON_VALUE(data_json, '$.review') AS review_id,
 
         -- ===== FRAUD =====
         JSON_VALUE(data_json, '$.fraud_details.user_report') AS fraud_user_report,
         JSON_VALUE(data_json, '$.fraud_details.stripe_report') AS fraud_stripe_report,
+
         -- ===== SHIPPING =====
         JSON_VALUE(data_json, '$.shipping.name') AS shipping_name,
         JSON_VALUE(data_json, '$.shipping.phone') AS shipping_phone,
         JSON_VALUE(data_json, '$.shipping.carrier') AS shipping_carrier,
         JSON_VALUE(data_json, '$.shipping.tracking_number') AS shipping_tracking_number,
-
-        -- ===== SHIPPING ADDRESS =====
         JSON_VALUE(data_json, '$.shipping.address.city') AS shipping_city,
         JSON_VALUE(data_json, '$.shipping.address.country') AS shipping_country,
         JSON_VALUE(data_json, '$.shipping.address.line1') AS shipping_line1,
         JSON_VALUE(data_json, '$.shipping.address.line2') AS shipping_line2,
         JSON_VALUE(data_json, '$.shipping.address.postal_code') AS shipping_postal_code,
         JSON_VALUE(data_json, '$.shipping.address.state') AS shipping_state,
+
         -- ===== CONNECT =====
         JSON_VALUE(data_json, '$.on_behalf_of') AS on_behalf_of,
         JSON_VALUE(data_json, '$.transfer_data.destination') AS transfer_destination,
         JSON_VALUE(data_json, '$.transfer_group') AS transfer_group,
         JSON_VALUE(data_json, '$.source_transfer') AS source_transfer_id,
         JSON_VALUE(data_json, '$.radar_options.session') AS radar_session_id,
+
         -- ===== CREATED =====
         TIMESTAMP_SECONDS(
             SAFE_CAST(JSON_VALUE(data_json, '$.created') AS INT64)
-        ) AS created_at
+        ) AS created_at,
+
+        -- ===== REFUNDS (chỉ lưu IDs - chi tiết ở stripe_raw_refunds) =====
+        ARRAY(
+            SELECT AS STRUCT
+                JSON_VALUE(r, '$.id') AS refund_id
+            FROM UNNEST(JSON_QUERY_ARRAY(data_json, '$.refunds.data')) AS r
+        ) AS refund_ids
 
     FROM source
 )
