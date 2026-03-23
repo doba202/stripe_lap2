@@ -104,8 +104,10 @@ class StripeClient:
         end = time_window["end"]
         print('time_window',time_window)
         #  build params từ config
+        # 1. extra_params tĩnh ở tầng rule (vd: status="all" cho subscriptions)
+        final_params = dict(rule.get("extra_params", {}))
+
         config_params = mode_conf.get("params", {})
-        final_params = {}
 
         for k, v in config_params.items():
             if isinstance(v, str):
@@ -120,5 +122,16 @@ class StripeClient:
             final_params.update(params)
 
         print("[FETCH PARAMS]", final_params)
+
+        # Nếu rule có extra_params_variants → fetch nhiều lần rồi gộp
+        # (ví dụ: prices cần fetch active=true và active=false riêng)
+        variants = rule.get("extra_params_variants")
+        if variants:
+            all_results = []
+            for variant in variants:
+                variant_params = {**final_params, **variant}
+                print(f"[VARIANT] {resource} extra_params={variant}")
+                all_results.extend(self._fetch_by_rule(resource, params=variant_params))
+            return all_results
 
         return self._fetch_by_rule(resource, params=final_params)

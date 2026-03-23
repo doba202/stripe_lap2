@@ -207,11 +207,18 @@ ENDPOINT_RULES = {
     "charges": LIST_CREATED_RULE,
     "payment_intents": LIST_CREATED_RULE,
     "plans": LIST_CREATED_RULE,
-    "prices": LIST_CREATED_RULE,
+    "prices": {
+        **LIST_CREATED_RULE,
+        "extra_params_variants": [
+            {"active": "true"},   # active prices
+            {"active": "false"},  # inactive prices
+        ],
+    },
     "products": LIST_CREATED_RULE,
     "subscriptions": {
         **LIST_CREATED_RULE,
         "children": ["subscription_items"],
+        "extra_params": {"status": "all"},  # fetch all statuses (active, canceled, past_due, …)
     },
     "subscription_items": {
         **LIST_BY_PARENT_RULE,
