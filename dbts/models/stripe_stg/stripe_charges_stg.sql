@@ -1,139 +1,443 @@
 WITH source AS (
-    SELECT
-        open_id,
-        data_json
+    SELECT open_id, data_json
     FROM {{ source('stripe_stg', 'stripe_raw_charges') }}
 ),
-
 parsed AS (
     SELECT
         open_id,
-        -- ===== PRIMARY =====
-        JSON_VALUE(data_json, '$.id') AS charge_id,
-
-        -- ===== CUSTOMER =====
-        JSON_VALUE(data_json, '$.customer') AS customer_id,
-
-        -- ===== PAYMENT INTENT =====
-        JSON_VALUE(data_json, '$.payment_intent') AS payment_intent_id,
-
-        -- ===== BALANCE TRANSACTION =====
-        JSON_VALUE(data_json, '$.balance_transaction') AS balance_txn_id,
-        JSON_VALUE(data_json, '$.failure_balance_transaction') AS failure_balance_txn_id,
-
-        -- ===== INVOICE =====
-        JSON_VALUE(data_json, '$.invoice') AS invoice_id,
-
-        -- ===== APP =====
-        JSON_VALUE(data_json, '$.application') AS application_id,
-        JSON_VALUE(data_json, '$.application_fee') AS application_fee,
-
-        -- ===== AMOUNT =====
-        SAFE_CAST(JSON_VALUE(data_json, '$.application_fee_amount') AS INT64) AS application_fee_amount,
+        -- SCALAR FIELDS
+        JSON_VALUE(data_json, '$.id') AS id,
+        JSON_VALUE(data_json, '$.object') AS object,
         SAFE_CAST(JSON_VALUE(data_json, '$.amount') AS INT64) AS amount,
         SAFE_CAST(JSON_VALUE(data_json, '$.amount_captured') AS INT64) AS amount_captured,
         SAFE_CAST(JSON_VALUE(data_json, '$.amount_refunded') AS INT64) AS amount_refunded,
-        SAFE_CAST(JSON_VALUE(data_json, '$.transfer_data.amount') AS INT64) AS transfer_amount,
-        JSON_VALUE(data_json, '$.currency') AS currency,
-
-        -- ===== STATUS =====
-        JSON_VALUE(data_json, '$.status') AS status,
-        CAST(JSON_VALUE(data_json, '$.paid') AS BOOL) AS is_paid,
-        CAST(JSON_VALUE(data_json, '$.captured') AS BOOL) AS is_captured,
-        CAST(JSON_VALUE(data_json, '$.refunded') AS BOOL) AS is_refunded,
-        CAST(JSON_VALUE(data_json, '$.disputed') AS BOOL) AS is_disputed,
-
-        -- ===== STATEMENT DESCRIPTOR =====
+        JSON_VALUE(data_json, '$.application') AS application,
+        JSON_VALUE(data_json, '$.application_fee') AS application_fee,
+        SAFE_CAST(JSON_VALUE(data_json, '$.application_fee_amount') AS INT64) AS application_fee_amount,
+        JSON_VALUE(data_json, '$.balance_transaction') AS balance_transaction,
         JSON_VALUE(data_json, '$.calculated_statement_descriptor') AS calculated_statement_descriptor,
+        CAST(JSON_VALUE(data_json, '$.captured') AS BOOL) AS captured,
+        TIMESTAMP_SECONDS(SAFE_CAST(JSON_VALUE(data_json, '$.created') AS INT64)) AS created,
+        JSON_VALUE(data_json, '$.currency') AS currency,
+        JSON_VALUE(data_json, '$.customer') AS customer,
         JSON_VALUE(data_json, '$.description') AS description,
-        JSON_VALUE(data_json, '$.destination') AS destination,
-        JSON_VALUE(data_json, '$.statement_descriptor') AS statement_descriptor,
-        JSON_VALUE(data_json, '$.statement_descriptor_suffix') AS statement_descriptor_suffix,
-
-        -- ===== PAYMENT METHOD =====
-        JSON_VALUE(data_json, '$.payment_method') AS payment_method_id,
-        -- Giữ payment_method_type ở bảng chính để quick filter
-        JSON_VALUE(data_json, '$.payment_method_details.type') AS payment_method_type,
-
-        -- ===== PRESENTMENT (FX / DISPLAY CURRENCY) =====
-        SAFE_CAST(JSON_VALUE(data_json, '$.presentment_details.presentment_amount') AS INT64)
-            AS presentment_amount,
-        JSON_VALUE(data_json, '$.presentment_details.presentment_currency')
-            AS presentment_currency,
-
-        -- ===== BILLING =====
-        JSON_VALUE(data_json, '$.billing_details.name') AS billing_name,
-        JSON_VALUE(data_json, '$.billing_details.email') AS billing_email,
-        JSON_VALUE(data_json, '$.billing_details.phone') AS billing_phone,
-        JSON_VALUE(data_json, '$.billing_details.tax_id') AS billing_tax_id,
-
-        JSON_VALUE(data_json, '$.billing_details.address.city') AS billing_city,
-        JSON_VALUE(data_json, '$.billing_details.address.country') AS billing_country,
-        JSON_VALUE(data_json, '$.billing_details.address.line1') AS billing_line1,
-        JSON_VALUE(data_json, '$.billing_details.address.line2') AS billing_line2,
-        JSON_VALUE(data_json, '$.billing_details.address.postal_code') AS billing_postal_code,
-        JSON_VALUE(data_json, '$.billing_details.address.state') AS billing_state,
-
-        -- ===== RECEIPT =====
+        CAST(JSON_VALUE(data_json, '$.disputed') AS BOOL) AS disputed,
+        JSON_VALUE(data_json, '$.failure_balance_transaction') AS failure_balance_transaction,
+        JSON_VALUE(data_json, '$.failure_code') AS failure_code,
+        JSON_VALUE(data_json, '$.failure_message') AS failure_message,
+        CAST(JSON_VALUE(data_json, '$.livemode') AS BOOL) AS livemode,
+        JSON_VALUE(data_json, '$.on_behalf_of') AS on_behalf_of,
+        CAST(JSON_VALUE(data_json, '$.paid') AS BOOL) AS paid,
+        JSON_VALUE(data_json, '$.payment_intent') AS payment_intent,
+        JSON_VALUE(data_json, '$.payment_method') AS payment_method,
         JSON_VALUE(data_json, '$.receipt_email') AS receipt_email,
         JSON_VALUE(data_json, '$.receipt_number') AS receipt_number,
         JSON_VALUE(data_json, '$.receipt_url') AS receipt_url,
-
-        -- ===== OUTCOME =====
-        JSON_VALUE(data_json, '$.outcome.type') AS outcome_type,
-        JSON_VALUE(data_json, '$.outcome.reason') AS outcome_reason,
-        JSON_VALUE(data_json, '$.outcome.network_status') AS outcome_network_status,
-        JSON_VALUE(data_json, '$.outcome.network_advice_code') AS network_advice_code,
-        JSON_VALUE(data_json, '$.outcome.network_decline_code') AS network_decline_code,
+        CAST(JSON_VALUE(data_json, '$.refunded') AS BOOL) AS refunded,
+        JSON_VALUE(data_json, '$.review') AS review,
+        JSON_VALUE(data_json, '$.source_transfer') AS source_transfer,
+        JSON_VALUE(data_json, '$.statement_descriptor') AS statement_descriptor,
+        JSON_VALUE(data_json, '$.statement_descriptor_suffix') AS statement_descriptor_suffix,
+        JSON_VALUE(data_json, '$.status') AS status,
+        JSON_VALUE(data_json, '$.transfer') AS transfer,
+        JSON_VALUE(data_json, '$.transfer_group') AS transfer_group,
+        -- billing_details
+        JSON_VALUE(data_json, '$.billing_details.email') AS billing_details_email,
+        JSON_VALUE(data_json, '$.billing_details.name') AS billing_details_name,
+        JSON_VALUE(data_json, '$.billing_details.phone') AS billing_details_phone,
+        JSON_VALUE(data_json, '$.billing_details.tax_id') AS billing_details_tax_id,
+        JSON_VALUE(data_json, '$.billing_details.address.city') AS billing_details_address_city,
+        JSON_VALUE(data_json, '$.billing_details.address.country') AS billing_details_address_country,
+        JSON_VALUE(data_json, '$.billing_details.address.line1') AS billing_details_address_line1,
+        JSON_VALUE(data_json, '$.billing_details.address.line2') AS billing_details_address_line2,
+        JSON_VALUE(data_json, '$.billing_details.address.postal_code') AS billing_details_address_postal_code,
+        JSON_VALUE(data_json, '$.billing_details.address.state') AS billing_details_address_state,
+        -- fraud_details
+        JSON_VALUE(data_json, '$.fraud_details.stripe_report') AS fraud_details_stripe_report,
+        JSON_VALUE(data_json, '$.fraud_details.user_report') AS fraud_details_user_report,
+        -- outcome
         JSON_VALUE(data_json, '$.outcome.advice_code') AS outcome_advice_code,
+        JSON_VALUE(data_json, '$.outcome.network_advice_code') AS outcome_network_advice_code,
+        JSON_VALUE(data_json, '$.outcome.network_decline_code') AS outcome_network_decline_code,
+        JSON_VALUE(data_json, '$.outcome.network_status') AS outcome_network_status,
+        JSON_VALUE(data_json, '$.outcome.reason') AS outcome_reason,
         JSON_VALUE(data_json, '$.outcome.risk_level') AS outcome_risk_level,
         SAFE_CAST(JSON_VALUE(data_json, '$.outcome.risk_score') AS INT64) AS outcome_risk_score,
-        JSON_VALUE(data_json, '$.outcome.rule') AS outcome_rule_id,
+        JSON_VALUE(data_json, '$.outcome.rule') AS outcome_rule,
         JSON_VALUE(data_json, '$.outcome.seller_message') AS outcome_seller_message,
-
-        -- ===== FAILURE =====
-        JSON_VALUE(data_json, '$.failure_code') AS failure_code,
-        JSON_VALUE(data_json, '$.failure_message') AS failure_message,
-
-        -- ===== REVIEW =====
-        JSON_VALUE(data_json, '$.review') AS review_id,
-
-        -- ===== FRAUD =====
-        JSON_VALUE(data_json, '$.fraud_details.user_report') AS fraud_user_report,
-        JSON_VALUE(data_json, '$.fraud_details.stripe_report') AS fraud_stripe_report,
-
-        -- ===== SHIPPING =====
+        JSON_VALUE(data_json, '$.outcome.type') AS outcome_type,
+        -- presentment_details
+        SAFE_CAST(JSON_VALUE(data_json, '$.presentment_details.presentment_amount') AS INT64) AS presentment_details_presentment_amount,
+        JSON_VALUE(data_json, '$.presentment_details.presentment_currency') AS presentment_details_presentment_currency,
+        -- radar_options
+        JSON_VALUE(data_json, '$.radar_options.session') AS radar_options_session,
+        -- shipping
         JSON_VALUE(data_json, '$.shipping.name') AS shipping_name,
         JSON_VALUE(data_json, '$.shipping.phone') AS shipping_phone,
         JSON_VALUE(data_json, '$.shipping.carrier') AS shipping_carrier,
         JSON_VALUE(data_json, '$.shipping.tracking_number') AS shipping_tracking_number,
-        JSON_VALUE(data_json, '$.shipping.address.city') AS shipping_city,
-        JSON_VALUE(data_json, '$.shipping.address.country') AS shipping_country,
-        JSON_VALUE(data_json, '$.shipping.address.line1') AS shipping_line1,
-        JSON_VALUE(data_json, '$.shipping.address.line2') AS shipping_line2,
-        JSON_VALUE(data_json, '$.shipping.address.postal_code') AS shipping_postal_code,
-        JSON_VALUE(data_json, '$.shipping.address.state') AS shipping_state,
-
-        -- ===== CONNECT =====
-        JSON_VALUE(data_json, '$.on_behalf_of') AS on_behalf_of,
-        JSON_VALUE(data_json, '$.transfer_data.destination') AS transfer_destination,
-        JSON_VALUE(data_json, '$.transfer_group') AS transfer_group,
-        JSON_VALUE(data_json, '$.source_transfer') AS source_transfer_id,
-        JSON_VALUE(data_json, '$.radar_options.session') AS radar_session_id,
-
-        -- ===== CREATED =====
-        TIMESTAMP_SECONDS(
-            SAFE_CAST(JSON_VALUE(data_json, '$.created') AS INT64)
-        ) AS created_at,
-
-        -- ===== REFUNDS (chỉ lưu IDs - chi tiết ở stripe_raw_refunds) =====
-        ARRAY(
-            SELECT AS STRUCT
-                JSON_VALUE(r, '$.id') AS refund_id
-            FROM UNNEST(JSON_QUERY_ARRAY(data_json, '$.refunds.data')) AS r
-        ) AS refund_ids
-
+        JSON_VALUE(data_json, '$.shipping.address.city') AS shipping_address_city,
+        JSON_VALUE(data_json, '$.shipping.address.country') AS shipping_address_country,
+        JSON_VALUE(data_json, '$.shipping.address.line1') AS shipping_address_line1,
+        JSON_VALUE(data_json, '$.shipping.address.line2') AS shipping_address_line2,
+        JSON_VALUE(data_json, '$.shipping.address.postal_code') AS shipping_address_postal_code,
+        JSON_VALUE(data_json, '$.shipping.address.state') AS shipping_address_state,
+        -- transfer_data
+        SAFE_CAST(JSON_VALUE(data_json, '$.transfer_data.amount') AS INT64) AS transfer_data_amount,
+        JSON_VALUE(data_json, '$.transfer_data.destination') AS transfer_data_destination,
+        -- ===== payment_method_details =====
+        JSON_VALUE(data_json, '$.payment_method_details.type') AS payment_method_details_type,
+        -- ach_credit_transfer
+        JSON_VALUE(data_json, '$.payment_method_details.ach_credit_transfer.account_number') AS payment_method_details_ach_credit_transfer_account_number,
+        JSON_VALUE(data_json, '$.payment_method_details.ach_credit_transfer.bank_name') AS payment_method_details_ach_credit_transfer_bank_name,
+        JSON_VALUE(data_json, '$.payment_method_details.ach_credit_transfer.routing_number') AS payment_method_details_ach_credit_transfer_routing_number,
+        JSON_VALUE(data_json, '$.payment_method_details.ach_credit_transfer.swift_code') AS payment_method_details_ach_credit_transfer_swift_code,
+        -- ach_debit
+        JSON_VALUE(data_json, '$.payment_method_details.ach_debit.account_holder_type') AS payment_method_details_ach_debit_account_holder_type,
+        JSON_VALUE(data_json, '$.payment_method_details.ach_debit.bank_name') AS payment_method_details_ach_debit_bank_name,
+        JSON_VALUE(data_json, '$.payment_method_details.ach_debit.country') AS payment_method_details_ach_debit_country,
+        JSON_VALUE(data_json, '$.payment_method_details.ach_debit.fingerprint') AS payment_method_details_ach_debit_fingerprint,
+        JSON_VALUE(data_json, '$.payment_method_details.ach_debit.last4') AS payment_method_details_ach_debit_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.ach_debit.routing_number') AS payment_method_details_ach_debit_routing_number,
+        -- acss_debit
+        JSON_VALUE(data_json, '$.payment_method_details.acss_debit.bank_name') AS payment_method_details_acss_debit_bank_name,
+        JSON_VALUE(data_json, '$.payment_method_details.acss_debit.expected_debit_date') AS payment_method_details_acss_debit_expected_debit_date,
+        JSON_VALUE(data_json, '$.payment_method_details.acss_debit.fingerprint') AS payment_method_details_acss_debit_fingerprint,
+        JSON_VALUE(data_json, '$.payment_method_details.acss_debit.institution_number') AS payment_method_details_acss_debit_institution_number,
+        JSON_VALUE(data_json, '$.payment_method_details.acss_debit.last4') AS payment_method_details_acss_debit_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.acss_debit.mandate') AS payment_method_details_acss_debit_mandate,
+        JSON_VALUE(data_json, '$.payment_method_details.acss_debit.transit_number') AS payment_method_details_acss_debit_transit_number,
+        -- affirm
+        JSON_VALUE(data_json, '$.payment_method_details.affirm.location') AS payment_method_details_affirm_location,
+        JSON_VALUE(data_json, '$.payment_method_details.affirm.reader') AS payment_method_details_affirm_reader,
+        JSON_VALUE(data_json, '$.payment_method_details.affirm.transaction_id') AS payment_method_details_affirm_transaction_id,
+        -- afterpay_clearpay
+        JSON_VALUE(data_json, '$.payment_method_details.afterpay_clearpay.order_id') AS payment_method_details_afterpay_clearpay_order_id,
+        JSON_VALUE(data_json, '$.payment_method_details.afterpay_clearpay.reference') AS payment_method_details_afterpay_clearpay_reference,
+        -- alipay
+        JSON_VALUE(data_json, '$.payment_method_details.alipay.buyer_id') AS payment_method_details_alipay_buyer_id,
+        JSON_VALUE(data_json, '$.payment_method_details.alipay.fingerprint') AS payment_method_details_alipay_fingerprint,
+        JSON_VALUE(data_json, '$.payment_method_details.alipay.transaction_id') AS payment_method_details_alipay_transaction_id,
+        -- alma
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.alma.installments.count') AS INT64) AS payment_method_details_alma_installments_count,
+        JSON_VALUE(data_json, '$.payment_method_details.alma.transaction_id') AS payment_method_details_alma_transaction_id,
+        -- amazon_pay
+        JSON_VALUE(data_json, '$.payment_method_details.amazon_pay.funding.type') AS payment_method_details_amazon_pay_funding_type,
+        JSON_VALUE(data_json, '$.payment_method_details.amazon_pay.funding.card.brand') AS payment_method_details_amazon_pay_funding_card_brand,
+        JSON_VALUE(data_json, '$.payment_method_details.amazon_pay.funding.card.country') AS payment_method_details_amazon_pay_funding_card_country,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.amazon_pay.funding.card.exp_month') AS INT64) AS payment_method_details_amazon_pay_funding_card_exp_month,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.amazon_pay.funding.card.exp_year') AS INT64) AS payment_method_details_amazon_pay_funding_card_exp_year,
+        JSON_VALUE(data_json, '$.payment_method_details.amazon_pay.funding.card.funding') AS payment_method_details_amazon_pay_funding_card_funding,
+        JSON_VALUE(data_json, '$.payment_method_details.amazon_pay.funding.card.last4') AS payment_method_details_amazon_pay_funding_card_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.amazon_pay.transaction_id') AS payment_method_details_amazon_pay_transaction_id,
+        -- au_becs_debit
+        JSON_VALUE(data_json, '$.payment_method_details.au_becs_debit.bsb_number') AS payment_method_details_au_becs_debit_bsb_number,
+        JSON_VALUE(data_json, '$.payment_method_details.au_becs_debit.expected_debit_date') AS payment_method_details_au_becs_debit_expected_debit_date,
+        JSON_VALUE(data_json, '$.payment_method_details.au_becs_debit.fingerprint') AS payment_method_details_au_becs_debit_fingerprint,
+        JSON_VALUE(data_json, '$.payment_method_details.au_becs_debit.last4') AS payment_method_details_au_becs_debit_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.au_becs_debit.mandate') AS payment_method_details_au_becs_debit_mandate,
+        -- bacs_debit
+        JSON_VALUE(data_json, '$.payment_method_details.bacs_debit.expected_debit_date') AS payment_method_details_bacs_debit_expected_debit_date,
+        JSON_VALUE(data_json, '$.payment_method_details.bacs_debit.fingerprint') AS payment_method_details_bacs_debit_fingerprint,
+        JSON_VALUE(data_json, '$.payment_method_details.bacs_debit.last4') AS payment_method_details_bacs_debit_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.bacs_debit.mandate') AS payment_method_details_bacs_debit_mandate,
+        JSON_VALUE(data_json, '$.payment_method_details.bacs_debit.sort_code') AS payment_method_details_bacs_debit_sort_code,
+        -- bancontact
+        JSON_VALUE(data_json, '$.payment_method_details.bancontact.bank_code') AS payment_method_details_bancontact_bank_code,
+        JSON_VALUE(data_json, '$.payment_method_details.bancontact.bank_name') AS payment_method_details_bancontact_bank_name,
+        JSON_VALUE(data_json, '$.payment_method_details.bancontact.bic') AS payment_method_details_bancontact_bic,
+        JSON_VALUE(data_json, '$.payment_method_details.bancontact.generated_sepa_debit') AS payment_method_details_bancontact_generated_sepa_debit,
+        JSON_VALUE(data_json, '$.payment_method_details.bancontact.generated_sepa_debit_mandate') AS payment_method_details_bancontact_generated_sepa_debit_mandate,
+        JSON_VALUE(data_json, '$.payment_method_details.bancontact.iban_last4') AS payment_method_details_bancontact_iban_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.bancontact.preferred_language') AS payment_method_details_bancontact_preferred_language,
+        JSON_VALUE(data_json, '$.payment_method_details.bancontact.verified_name') AS payment_method_details_bancontact_verified_name,
+        -- billie
+        JSON_VALUE(data_json, '$.payment_method_details.billie.transaction_id') AS payment_method_details_billie_transaction_id,
+        -- blik
+        JSON_VALUE(data_json, '$.payment_method_details.blik.buyer_id') AS payment_method_details_blik_buyer_id,
+        -- boleto
+        JSON_VALUE(data_json, '$.payment_method_details.boleto.tax_id') AS payment_method_details_boleto_tax_id,
+        -- card
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.card.amount_authorized') AS INT64) AS payment_method_details_card_amount_authorized,
+        JSON_VALUE(data_json, '$.payment_method_details.card.authorization_code') AS payment_method_details_card_authorization_code,
+        JSON_VALUE(data_json, '$.payment_method_details.card.brand') AS payment_method_details_card_brand,
+        TIMESTAMP_SECONDS(SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.card.capture_before') AS INT64)) AS payment_method_details_card_capture_before,
+        JSON_VALUE(data_json, '$.payment_method_details.card.checks.address_line1_check') AS payment_method_details_card_checks_address_line1_check,
+        JSON_VALUE(data_json, '$.payment_method_details.card.checks.address_postal_code_check') AS payment_method_details_card_checks_address_postal_code_check,
+        JSON_VALUE(data_json, '$.payment_method_details.card.checks.cvc_check') AS payment_method_details_card_checks_cvc_check,
+        JSON_VALUE(data_json, '$.payment_method_details.card.country') AS payment_method_details_card_country,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.card.exp_month') AS INT64) AS payment_method_details_card_exp_month,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.card.exp_year') AS INT64) AS payment_method_details_card_exp_year,
+        JSON_VALUE(data_json, '$.payment_method_details.card.extended_authorization.status') AS payment_method_details_card_extended_authorization_status,
+        JSON_VALUE(data_json, '$.payment_method_details.card.fingerprint') AS payment_method_details_card_fingerprint,
+        JSON_VALUE(data_json, '$.payment_method_details.card.funding') AS payment_method_details_card_funding,
+        JSON_VALUE(data_json, '$.payment_method_details.card.incremental_authorization.status') AS payment_method_details_card_incremental_authorization_status,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.card.installments.plan.count') AS INT64) AS payment_method_details_card_installments_plan_count,
+        JSON_VALUE(data_json, '$.payment_method_details.card.installments.plan.interval') AS payment_method_details_card_installments_plan_interval,
+        JSON_VALUE(data_json, '$.payment_method_details.card.installments.plan.type') AS payment_method_details_card_installments_plan_type,
+        JSON_VALUE(data_json, '$.payment_method_details.card.last4') AS payment_method_details_card_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.card.mandate') AS payment_method_details_card_mandate,
+        JSON_VALUE(data_json, '$.payment_method_details.card.multicapture.status') AS payment_method_details_card_multicapture_status,
+        JSON_VALUE(data_json, '$.payment_method_details.card.network') AS payment_method_details_card_network,
+        CAST(JSON_VALUE(data_json, '$.payment_method_details.card.network_token.used') AS BOOL) AS payment_method_details_card_network_token_used,
+        JSON_VALUE(data_json, '$.payment_method_details.card.network_transaction_id') AS payment_method_details_card_network_transaction_id,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.card.overcapture.maximum_amount_capturable') AS INT64) AS payment_method_details_card_overcapture_maximum_amount_capturable,
+        JSON_VALUE(data_json, '$.payment_method_details.card.overcapture.status') AS payment_method_details_card_overcapture_status,
+        JSON_VALUE(data_json, '$.payment_method_details.card.regulated_status') AS payment_method_details_card_regulated_status,
+        JSON_VALUE(data_json, '$.payment_method_details.card.three_d_secure.authentication_flow') AS payment_method_details_card_three_d_secure_authentication_flow,
+        JSON_VALUE(data_json, '$.payment_method_details.card.three_d_secure.electronic_commerce_indicator') AS payment_method_details_card_three_d_secure_electronic_commerce_indicator,
+        JSON_VALUE(data_json, '$.payment_method_details.card.three_d_secure.exemption_indicator') AS payment_method_details_card_three_d_secure_exemption_indicator,
+        CAST(JSON_VALUE(data_json, '$.payment_method_details.card.three_d_secure.exemption_indicator_applied') AS BOOL) AS payment_method_details_card_three_d_secure_exemption_indicator_applied,
+        JSON_VALUE(data_json, '$.payment_method_details.card.three_d_secure.result') AS payment_method_details_card_three_d_secure_result,
+        JSON_VALUE(data_json, '$.payment_method_details.card.three_d_secure.result_reason') AS payment_method_details_card_three_d_secure_result_reason,
+        JSON_VALUE(data_json, '$.payment_method_details.card.three_d_secure.transaction_id') AS payment_method_details_card_three_d_secure_transaction_id,
+        JSON_VALUE(data_json, '$.payment_method_details.card.three_d_secure.version') AS payment_method_details_card_three_d_secure_version,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.type') AS payment_method_details_card_wallet_type,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.dynamic_last4') AS payment_method_details_card_wallet_dynamic_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.apple_pay.type') AS payment_method_details_card_wallet_apple_pay_type,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.email') AS payment_method_details_card_wallet_masterpass_email,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.name') AS payment_method_details_card_wallet_masterpass_name,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.billing_address.city') AS payment_method_details_card_wallet_masterpass_billing_address_city,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.billing_address.country') AS payment_method_details_card_wallet_masterpass_billing_address_country,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.billing_address.line1') AS payment_method_details_card_wallet_masterpass_billing_address_line1,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.billing_address.line2') AS payment_method_details_card_wallet_masterpass_billing_address_line2,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.billing_address.postal_code') AS payment_method_details_card_wallet_masterpass_billing_address_postal_code,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.billing_address.state') AS payment_method_details_card_wallet_masterpass_billing_address_state,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.shipping_address.city') AS payment_method_details_card_wallet_masterpass_shipping_address_city,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.shipping_address.country') AS payment_method_details_card_wallet_masterpass_shipping_address_country,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.shipping_address.line1') AS payment_method_details_card_wallet_masterpass_shipping_address_line1,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.shipping_address.line2') AS payment_method_details_card_wallet_masterpass_shipping_address_line2,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.shipping_address.postal_code') AS payment_method_details_card_wallet_masterpass_shipping_address_postal_code,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.masterpass.shipping_address.state') AS payment_method_details_card_wallet_masterpass_shipping_address_state,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.email') AS payment_method_details_card_wallet_visa_checkout_email,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.name') AS payment_method_details_card_wallet_visa_checkout_name,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.billing_address.city') AS payment_method_details_card_wallet_visa_checkout_billing_address_city,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.billing_address.country') AS payment_method_details_card_wallet_visa_checkout_billing_address_country,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.billing_address.line1') AS payment_method_details_card_wallet_visa_checkout_billing_address_line1,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.billing_address.line2') AS payment_method_details_card_wallet_visa_checkout_billing_address_line2,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.billing_address.postal_code') AS payment_method_details_card_wallet_visa_checkout_billing_address_postal_code,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.billing_address.state') AS payment_method_details_card_wallet_visa_checkout_billing_address_state,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.shipping_address.city') AS payment_method_details_card_wallet_visa_checkout_shipping_address_city,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.shipping_address.country') AS payment_method_details_card_wallet_visa_checkout_shipping_address_country,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.shipping_address.line1') AS payment_method_details_card_wallet_visa_checkout_shipping_address_line1,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.shipping_address.line2') AS payment_method_details_card_wallet_visa_checkout_shipping_address_line2,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.shipping_address.postal_code') AS payment_method_details_card_wallet_visa_checkout_shipping_address_postal_code,
+        JSON_VALUE(data_json, '$.payment_method_details.card.wallet.visa_checkout.shipping_address.state') AS payment_method_details_card_wallet_visa_checkout_shipping_address_state,
+        -- card_present
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.card_present.amount_authorized') AS INT64) AS payment_method_details_card_present_amount_authorized,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.brand') AS payment_method_details_card_present_brand,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.brand_product') AS payment_method_details_card_present_brand_product,
+        TIMESTAMP_SECONDS(SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.card_present.capture_before') AS INT64)) AS payment_method_details_card_present_capture_before,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.cardholder_name') AS payment_method_details_card_present_cardholder_name,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.country') AS payment_method_details_card_present_country,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.description') AS payment_method_details_card_present_description,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.emv_auth_data') AS payment_method_details_card_present_emv_auth_data,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.card_present.exp_month') AS INT64) AS payment_method_details_card_present_exp_month,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.card_present.exp_year') AS INT64) AS payment_method_details_card_present_exp_year,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.fingerprint') AS payment_method_details_card_present_fingerprint,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.funding') AS payment_method_details_card_present_funding,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.generated_card') AS payment_method_details_card_present_generated_card,
+        CAST(JSON_VALUE(data_json, '$.payment_method_details.card_present.incremental_authorization_supported') AS BOOL) AS payment_method_details_card_present_incremental_authorization_supported,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.issuer') AS payment_method_details_card_present_issuer,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.last4') AS payment_method_details_card_present_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.location') AS payment_method_details_card_present_location,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.network') AS payment_method_details_card_present_network,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.network_transaction_id') AS payment_method_details_card_present_network_transaction_id,
+        TIMESTAMP_SECONDS(SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.card_present.offline.stored_at') AS INT64)) AS payment_method_details_card_present_offline_stored_at,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.offline.type') AS payment_method_details_card_present_offline_type,
+        CAST(JSON_VALUE(data_json, '$.payment_method_details.card_present.overcapture_supported') AS BOOL) AS payment_method_details_card_present_overcapture_supported,
+        JSON_QUERY(data_json, '$.payment_method_details.card_present.preferred_locales') AS payment_method_details_card_present_preferred_locales,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.read_method') AS payment_method_details_card_present_read_method,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.reader') AS payment_method_details_card_present_reader,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.receipt.account_type') AS payment_method_details_card_present_receipt_account_type,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.receipt.application_cryptogram') AS payment_method_details_card_present_receipt_application_cryptogram,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.receipt.application_preferred_name') AS payment_method_details_card_present_receipt_application_preferred_name,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.receipt.authorization_code') AS payment_method_details_card_present_receipt_authorization_code,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.receipt.authorization_response_code') AS payment_method_details_card_present_receipt_authorization_response_code,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.receipt.cardholder_verification_method') AS payment_method_details_card_present_receipt_cardholder_verification_method,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.receipt.dedicated_file_name') AS payment_method_details_card_present_receipt_dedicated_file_name,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.receipt.terminal_verification_results') AS payment_method_details_card_present_receipt_terminal_verification_results,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.receipt.transaction_status_information') AS payment_method_details_card_present_receipt_transaction_status_information,
+        JSON_VALUE(data_json, '$.payment_method_details.card_present.wallet.type') AS payment_method_details_card_present_wallet_type,
+        -- cashapp
+        JSON_VALUE(data_json, '$.payment_method_details.cashapp.buyer_id') AS payment_method_details_cashapp_buyer_id,
+        JSON_VALUE(data_json, '$.payment_method_details.cashapp.cashtag') AS payment_method_details_cashapp_cashtag,
+        JSON_VALUE(data_json, '$.payment_method_details.cashapp.transaction_id') AS payment_method_details_cashapp_transaction_id,
+        -- crypto
+        JSON_VALUE(data_json, '$.payment_method_details.crypto.buyer_address') AS payment_method_details_crypto_buyer_address,
+        JSON_VALUE(data_json, '$.payment_method_details.crypto.network') AS payment_method_details_crypto_network,
+        JSON_VALUE(data_json, '$.payment_method_details.crypto.token_currency') AS payment_method_details_crypto_token_currency,
+        JSON_VALUE(data_json, '$.payment_method_details.crypto.transaction_hash') AS payment_method_details_crypto_transaction_hash,
+        -- eps
+        JSON_VALUE(data_json, '$.payment_method_details.eps.bank') AS payment_method_details_eps_bank,
+        JSON_VALUE(data_json, '$.payment_method_details.eps.verified_name') AS payment_method_details_eps_verified_name,
+        -- fpx
+        JSON_VALUE(data_json, '$.payment_method_details.fpx.bank') AS payment_method_details_fpx_bank,
+        JSON_VALUE(data_json, '$.payment_method_details.fpx.transaction_id') AS payment_method_details_fpx_transaction_id,
+        -- giropay
+        JSON_VALUE(data_json, '$.payment_method_details.giropay.bank_code') AS payment_method_details_giropay_bank_code,
+        JSON_VALUE(data_json, '$.payment_method_details.giropay.bank_name') AS payment_method_details_giropay_bank_name,
+        JSON_VALUE(data_json, '$.payment_method_details.giropay.bic') AS payment_method_details_giropay_bic,
+        JSON_VALUE(data_json, '$.payment_method_details.giropay.verified_name') AS payment_method_details_giropay_verified_name,
+        -- grabpay
+        JSON_VALUE(data_json, '$.payment_method_details.grabpay.transaction_id') AS payment_method_details_grabpay_transaction_id,
+        -- ideal
+        JSON_VALUE(data_json, '$.payment_method_details.ideal.bank') AS payment_method_details_ideal_bank,
+        JSON_VALUE(data_json, '$.payment_method_details.ideal.bic') AS payment_method_details_ideal_bic,
+        JSON_VALUE(data_json, '$.payment_method_details.ideal.generated_sepa_debit') AS payment_method_details_ideal_generated_sepa_debit,
+        JSON_VALUE(data_json, '$.payment_method_details.ideal.generated_sepa_debit_mandate') AS payment_method_details_ideal_generated_sepa_debit_mandate,
+        JSON_VALUE(data_json, '$.payment_method_details.ideal.iban_last4') AS payment_method_details_ideal_iban_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.ideal.transaction_id') AS payment_method_details_ideal_transaction_id,
+        JSON_VALUE(data_json, '$.payment_method_details.ideal.verified_name') AS payment_method_details_ideal_verified_name,
+        -- interac_present
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.brand') AS payment_method_details_interac_present_brand,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.cardholder_name') AS payment_method_details_interac_present_cardholder_name,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.country') AS payment_method_details_interac_present_country,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.description') AS payment_method_details_interac_present_description,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.emv_auth_data') AS payment_method_details_interac_present_emv_auth_data,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.interac_present.exp_month') AS INT64) AS payment_method_details_interac_present_exp_month,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.interac_present.exp_year') AS INT64) AS payment_method_details_interac_present_exp_year,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.fingerprint') AS payment_method_details_interac_present_fingerprint,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.funding') AS payment_method_details_interac_present_funding,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.generated_card') AS payment_method_details_interac_present_generated_card,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.issuer') AS payment_method_details_interac_present_issuer,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.last4') AS payment_method_details_interac_present_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.location') AS payment_method_details_interac_present_location,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.network') AS payment_method_details_interac_present_network,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.network_transaction_id') AS payment_method_details_interac_present_network_transaction_id,
+        JSON_QUERY(data_json, '$.payment_method_details.interac_present.preferred_locales') AS payment_method_details_interac_present_preferred_locales,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.read_method') AS payment_method_details_interac_present_read_method,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.reader') AS payment_method_details_interac_present_reader,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.receipt.account_type') AS payment_method_details_interac_present_receipt_account_type,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.receipt.application_cryptogram') AS payment_method_details_interac_present_receipt_application_cryptogram,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.receipt.application_preferred_name') AS payment_method_details_interac_present_receipt_application_preferred_name,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.receipt.authorization_code') AS payment_method_details_interac_present_receipt_authorization_code,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.receipt.authorization_response_code') AS payment_method_details_interac_present_receipt_authorization_response_code,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.receipt.cardholder_verification_method') AS payment_method_details_interac_present_receipt_cardholder_verification_method,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.receipt.dedicated_file_name') AS payment_method_details_interac_present_receipt_dedicated_file_name,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.receipt.terminal_verification_results') AS payment_method_details_interac_present_receipt_terminal_verification_results,
+        JSON_VALUE(data_json, '$.payment_method_details.interac_present.receipt.transaction_status_information') AS payment_method_details_interac_present_receipt_transaction_status_information,
+        -- kakao_pay
+        JSON_VALUE(data_json, '$.payment_method_details.kakao_pay.buyer_id') AS payment_method_details_kakao_pay_buyer_id,
+        JSON_VALUE(data_json, '$.payment_method_details.kakao_pay.transaction_id') AS payment_method_details_kakao_pay_transaction_id,
+        -- klarna
+        JSON_VALUE(data_json, '$.payment_method_details.klarna.payer_details.address.country') AS payment_method_details_klarna_payer_details_address_country,
+        JSON_VALUE(data_json, '$.payment_method_details.klarna.payment_method_category') AS payment_method_details_klarna_payment_method_category,
+        JSON_VALUE(data_json, '$.payment_method_details.klarna.preferred_locale') AS payment_method_details_klarna_preferred_locale,
+        -- konbini
+        JSON_VALUE(data_json, '$.payment_method_details.konbini.store.chain') AS payment_method_details_konbini_store_chain,
+        -- kr_card
+        JSON_VALUE(data_json, '$.payment_method_details.kr_card.brand') AS payment_method_details_kr_card_brand,
+        JSON_VALUE(data_json, '$.payment_method_details.kr_card.buyer_id') AS payment_method_details_kr_card_buyer_id,
+        JSON_VALUE(data_json, '$.payment_method_details.kr_card.last4') AS payment_method_details_kr_card_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.kr_card.transaction_id') AS payment_method_details_kr_card_transaction_id,
+        -- link
+        JSON_VALUE(data_json, '$.payment_method_details.link.country') AS payment_method_details_link_country,
+        -- mobilepay
+        JSON_VALUE(data_json, '$.payment_method_details.mobilepay.card.brand') AS payment_method_details_mobilepay_card_brand,
+        JSON_VALUE(data_json, '$.payment_method_details.mobilepay.card.country') AS payment_method_details_mobilepay_card_country,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.mobilepay.card.exp_month') AS INT64) AS payment_method_details_mobilepay_card_exp_month,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.mobilepay.card.exp_year') AS INT64) AS payment_method_details_mobilepay_card_exp_year,
+        JSON_VALUE(data_json, '$.payment_method_details.mobilepay.card.last4') AS payment_method_details_mobilepay_card_last4,
+        -- multibanco
+        JSON_VALUE(data_json, '$.payment_method_details.multibanco.entity') AS payment_method_details_multibanco_entity,
+        JSON_VALUE(data_json, '$.payment_method_details.multibanco.reference') AS payment_method_details_multibanco_reference,
+        -- naver_pay
+        JSON_VALUE(data_json, '$.payment_method_details.naver_pay.buyer_id') AS payment_method_details_naver_pay_buyer_id,
+        JSON_VALUE(data_json, '$.payment_method_details.naver_pay.transaction_id') AS payment_method_details_naver_pay_transaction_id,
+        -- nz_bank_account
+        JSON_VALUE(data_json, '$.payment_method_details.nz_bank_account.account_holder_name') AS payment_method_details_nz_bank_account_account_holder_name,
+        JSON_VALUE(data_json, '$.payment_method_details.nz_bank_account.bank_code') AS payment_method_details_nz_bank_account_bank_code,
+        JSON_VALUE(data_json, '$.payment_method_details.nz_bank_account.bank_name') AS payment_method_details_nz_bank_account_bank_name,
+        JSON_VALUE(data_json, '$.payment_method_details.nz_bank_account.branch_code') AS payment_method_details_nz_bank_account_branch_code,
+        JSON_VALUE(data_json, '$.payment_method_details.nz_bank_account.expected_debit_date') AS payment_method_details_nz_bank_account_expected_debit_date,
+        JSON_VALUE(data_json, '$.payment_method_details.nz_bank_account.last4') AS payment_method_details_nz_bank_account_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.nz_bank_account.suffix') AS payment_method_details_nz_bank_account_suffix,
+        -- oxxo
+        JSON_VALUE(data_json, '$.payment_method_details.oxxo.number') AS payment_method_details_oxxo_number,
+        -- p24
+        JSON_VALUE(data_json, '$.payment_method_details.p24.bank') AS payment_method_details_p24_bank,
+        JSON_VALUE(data_json, '$.payment_method_details.p24.reference') AS payment_method_details_p24_reference,
+        JSON_VALUE(data_json, '$.payment_method_details.p24.verified_name') AS payment_method_details_p24_verified_name,
+        -- payco
+        JSON_VALUE(data_json, '$.payment_method_details.payco.buyer_id') AS payment_method_details_payco_buyer_id,
+        JSON_VALUE(data_json, '$.payment_method_details.payco.transaction_id') AS payment_method_details_payco_transaction_id,
+        -- paynow
+        JSON_VALUE(data_json, '$.payment_method_details.paynow.location') AS payment_method_details_paynow_location,
+        JSON_VALUE(data_json, '$.payment_method_details.paynow.reader') AS payment_method_details_paynow_reader,
+        JSON_VALUE(data_json, '$.payment_method_details.paynow.reference') AS payment_method_details_paynow_reference,
+        -- paypal
+        JSON_VALUE(data_json, '$.payment_method_details.paypal.country') AS payment_method_details_paypal_country,
+        JSON_VALUE(data_json, '$.payment_method_details.paypal.payer_email') AS payment_method_details_paypal_payer_email,
+        JSON_VALUE(data_json, '$.payment_method_details.paypal.payer_id') AS payment_method_details_paypal_payer_id,
+        JSON_VALUE(data_json, '$.payment_method_details.paypal.payer_name') AS payment_method_details_paypal_payer_name,
+        JSON_VALUE(data_json, '$.payment_method_details.paypal.seller_protection.status') AS payment_method_details_paypal_seller_protection_status,
+        JSON_QUERY(data_json, '$.payment_method_details.paypal.seller_protection.dispute_categories') AS payment_method_details_paypal_seller_protection_dispute_categories,
+        JSON_VALUE(data_json, '$.payment_method_details.paypal.transaction_id') AS payment_method_details_paypal_transaction_id,
+        -- payto
+        JSON_VALUE(data_json, '$.payment_method_details.payto.bsb_number') AS payment_method_details_payto_bsb_number,
+        JSON_VALUE(data_json, '$.payment_method_details.payto.last4') AS payment_method_details_payto_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.payto.mandate') AS payment_method_details_payto_mandate,
+        JSON_VALUE(data_json, '$.payment_method_details.payto.pay_id') AS payment_method_details_payto_pay_id,
+        -- pix
+        JSON_VALUE(data_json, '$.payment_method_details.pix.bank_transaction_id') AS payment_method_details_pix_bank_transaction_id,
+        -- promptpay
+        JSON_VALUE(data_json, '$.payment_method_details.promptpay.reference') AS payment_method_details_promptpay_reference,
+        -- revolut_pay
+        JSON_VALUE(data_json, '$.payment_method_details.revolut_pay.funding.type') AS payment_method_details_revolut_pay_funding_type,
+        JSON_VALUE(data_json, '$.payment_method_details.revolut_pay.funding.card.brand') AS payment_method_details_revolut_pay_funding_card_brand,
+        JSON_VALUE(data_json, '$.payment_method_details.revolut_pay.funding.card.country') AS payment_method_details_revolut_pay_funding_card_country,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.revolut_pay.funding.card.exp_month') AS INT64) AS payment_method_details_revolut_pay_funding_card_exp_month,
+        SAFE_CAST(JSON_VALUE(data_json, '$.payment_method_details.revolut_pay.funding.card.exp_year') AS INT64) AS payment_method_details_revolut_pay_funding_card_exp_year,
+        JSON_VALUE(data_json, '$.payment_method_details.revolut_pay.funding.card.funding') AS payment_method_details_revolut_pay_funding_card_funding,
+        JSON_VALUE(data_json, '$.payment_method_details.revolut_pay.funding.card.last4') AS payment_method_details_revolut_pay_funding_card_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.revolut_pay.transaction_id') AS payment_method_details_revolut_pay_transaction_id,
+        -- samsung_pay
+        JSON_VALUE(data_json, '$.payment_method_details.samsung_pay.buyer_id') AS payment_method_details_samsung_pay_buyer_id,
+        JSON_VALUE(data_json, '$.payment_method_details.samsung_pay.transaction_id') AS payment_method_details_samsung_pay_transaction_id,
+        -- satispay
+        JSON_VALUE(data_json, '$.payment_method_details.satispay.transaction_id') AS payment_method_details_satispay_transaction_id,
+        -- sepa_debit
+        JSON_VALUE(data_json, '$.payment_method_details.sepa_debit.bank_code') AS payment_method_details_sepa_debit_bank_code,
+        JSON_VALUE(data_json, '$.payment_method_details.sepa_debit.branch_code') AS payment_method_details_sepa_debit_branch_code,
+        JSON_VALUE(data_json, '$.payment_method_details.sepa_debit.country') AS payment_method_details_sepa_debit_country,
+        JSON_VALUE(data_json, '$.payment_method_details.sepa_debit.expected_debit_date') AS payment_method_details_sepa_debit_expected_debit_date,
+        JSON_VALUE(data_json, '$.payment_method_details.sepa_debit.fingerprint') AS payment_method_details_sepa_debit_fingerprint,
+        JSON_VALUE(data_json, '$.payment_method_details.sepa_debit.last4') AS payment_method_details_sepa_debit_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.sepa_debit.mandate') AS payment_method_details_sepa_debit_mandate,
+        -- sofort
+        JSON_VALUE(data_json, '$.payment_method_details.sofort.bank_code') AS payment_method_details_sofort_bank_code,
+        JSON_VALUE(data_json, '$.payment_method_details.sofort.bank_name') AS payment_method_details_sofort_bank_name,
+        JSON_VALUE(data_json, '$.payment_method_details.sofort.bic') AS payment_method_details_sofort_bic,
+        JSON_VALUE(data_json, '$.payment_method_details.sofort.country') AS payment_method_details_sofort_country,
+        JSON_VALUE(data_json, '$.payment_method_details.sofort.generated_sepa_debit') AS payment_method_details_sofort_generated_sepa_debit,
+        JSON_VALUE(data_json, '$.payment_method_details.sofort.generated_sepa_debit_mandate') AS payment_method_details_sofort_generated_sepa_debit_mandate,
+        JSON_VALUE(data_json, '$.payment_method_details.sofort.iban_last4') AS payment_method_details_sofort_iban_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.sofort.preferred_language') AS payment_method_details_sofort_preferred_language,
+        JSON_VALUE(data_json, '$.payment_method_details.sofort.verified_name') AS payment_method_details_sofort_verified_name,
+        -- swish
+        JSON_VALUE(data_json, '$.payment_method_details.swish.fingerprint') AS payment_method_details_swish_fingerprint,
+        JSON_VALUE(data_json, '$.payment_method_details.swish.payment_reference') AS payment_method_details_swish_payment_reference,
+        JSON_VALUE(data_json, '$.payment_method_details.swish.verified_phone_last4') AS payment_method_details_swish_verified_phone_last4,
+        -- us_bank_account
+        JSON_VALUE(data_json, '$.payment_method_details.us_bank_account.account_holder_type') AS payment_method_details_us_bank_account_account_holder_type,
+        JSON_VALUE(data_json, '$.payment_method_details.us_bank_account.account_type') AS payment_method_details_us_bank_account_account_type,
+        JSON_VALUE(data_json, '$.payment_method_details.us_bank_account.bank_name') AS payment_method_details_us_bank_account_bank_name,
+        JSON_VALUE(data_json, '$.payment_method_details.us_bank_account.expected_debit_date') AS payment_method_details_us_bank_account_expected_debit_date,
+        JSON_VALUE(data_json, '$.payment_method_details.us_bank_account.fingerprint') AS payment_method_details_us_bank_account_fingerprint,
+        JSON_VALUE(data_json, '$.payment_method_details.us_bank_account.last4') AS payment_method_details_us_bank_account_last4,
+        JSON_VALUE(data_json, '$.payment_method_details.us_bank_account.mandate') AS payment_method_details_us_bank_account_mandate,
+        JSON_VALUE(data_json, '$.payment_method_details.us_bank_account.payment_reference') AS payment_method_details_us_bank_account_payment_reference,
+        JSON_VALUE(data_json, '$.payment_method_details.us_bank_account.routing_number') AS payment_method_details_us_bank_account_routing_number,
+        -- wechat_pay
+        JSON_VALUE(data_json, '$.payment_method_details.wechat_pay.fingerprint') AS payment_method_details_wechat_pay_fingerprint,
+        JSON_VALUE(data_json, '$.payment_method_details.wechat_pay.location') AS payment_method_details_wechat_pay_location,
+        JSON_VALUE(data_json, '$.payment_method_details.wechat_pay.reader') AS payment_method_details_wechat_pay_reader,
+        JSON_VALUE(data_json, '$.payment_method_details.wechat_pay.transaction_id') AS payment_method_details_wechat_pay_transaction_id,
+        -- metadata (keep JSON)
+        JSON_QUERY(data_json, '$.metadata') AS metadata,
+        -- refunds (array → keep JSON)
+        JSON_QUERY(data_json, '$.refunds') AS refunds
     FROM source
 )
-
 SELECT * FROM parsed

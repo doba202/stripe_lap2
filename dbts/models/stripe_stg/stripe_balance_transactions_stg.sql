@@ -7,40 +7,27 @@ WITH source AS (
 
 parsed AS (
     SELECT
-        -- ===== PRIMARY KEY =====
         open_id,
-        JSON_VALUE(data_json, '$.id') AS balance_txn_id,
 
-        -- ===== AMOUNT =====
-        SAFE_CAST(JSON_VALUE(data_json, '$.amount') AS INT64) AS amount,
-        SAFE_CAST(JSON_VALUE(data_json, '$.fee') AS INT64) AS fee,
-        SAFE_CAST(JSON_VALUE(data_json, '$.net') AS INT64) AS net,
-
-        JSON_VALUE(data_json, '$.currency') AS currency,
+        -- ===== SCALAR FIELDS (level 1) =====
+        JSON_VALUE(data_json, '$.id')                 AS id,
+        JSON_VALUE(data_json, '$.object')             AS object,
+        SAFE_CAST(JSON_VALUE(data_json, '$.amount') AS INT64)        AS amount,
+        SAFE_CAST(JSON_VALUE(data_json, '$.fee') AS INT64)           AS fee,
+        SAFE_CAST(JSON_VALUE(data_json, '$.net') AS INT64)           AS net,
+        JSON_VALUE(data_json, '$.currency')           AS currency,
         SAFE_CAST(JSON_VALUE(data_json, '$.exchange_rate') AS FLOAT64) AS exchange_rate,
-
-        -- ===== TYPE =====
-        JSON_VALUE(data_json, '$.type') AS txn_type,
+        JSON_VALUE(data_json, '$.type')               AS type,
         JSON_VALUE(data_json, '$.reporting_category') AS reporting_category,
-        JSON_VALUE(data_json, '$.balance_type') AS balance_type,
+        JSON_VALUE(data_json, '$.balance_type')       AS balance_type,
+        JSON_VALUE(data_json, '$.status')             AS status,
+        JSON_VALUE(data_json, '$.description')        AS description,
+        JSON_VALUE(data_json, '$.source')             AS source,
+        TIMESTAMP_SECONDS(SAFE_CAST(JSON_VALUE(data_json, '$.created')      AS INT64)) AS created,
+        TIMESTAMP_SECONDS(SAFE_CAST(JSON_VALUE(data_json, '$.available_on') AS INT64)) AS available_on,
 
-        -- ===== STATUS =====
-        JSON_VALUE(data_json, '$.status') AS status,
-
-        -- ===== DESCRIPTION =====
-        JSON_VALUE(data_json, '$.description') AS description,
-
-        -- ===== SOURCE =====
-        JSON_VALUE(data_json, '$.source') AS source_id,
-
-        -- ===== TIMESTAMP =====
-        TIMESTAMP_SECONDS(
-            SAFE_CAST(JSON_VALUE(data_json, '$.created') AS INT64)
-        ) AS created_at,
-
-        TIMESTAMP_SECONDS(
-            SAFE_CAST(JSON_VALUE(data_json, '$.available_on') AS INT64)
-        ) AS available_on
+        -- ===== ARRAY / OBJECT FIELDS (level 1 — giữ nguyên JSON) =====
+        JSON_QUERY(data_json, '$.fee_details') AS fee_details
 
     FROM source
 )

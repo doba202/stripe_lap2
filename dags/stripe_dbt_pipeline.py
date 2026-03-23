@@ -14,7 +14,6 @@ execution_timeout_minutes = Variable.get("execution_timeout_minutes", default_va
 models = [
 "stripe_balance_stg",
 "stripe_balance_transactions_stg",
-"stripe_charges_payment_method_details_stg",
 "stripe_charges_stg",
 "stripe_customers_stg",
 "stripe_invoices_stg",
