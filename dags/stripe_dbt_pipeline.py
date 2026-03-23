@@ -37,10 +37,9 @@ with DAG(
     dag_id="stripe_dbt_pipeline",
     catchup=False,
     default_args={
-        'owner': 'stripe',
         'start_date': datetime(2026, 1, 1),
         "pool": "default_pool",
-        'retries': 2,
+        'retries': 3,
         'retry_delay': timedelta(minutes=1),
         'execution_timeout': timedelta(minutes=int(execution_timeout_minutes)),
     },

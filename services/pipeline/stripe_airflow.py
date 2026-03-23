@@ -121,7 +121,29 @@ def start(**context):
     print("Start pipeline...")
 
 
-def process_all_resources(**context):
+def delete_task(resource, **context):
+    mode = get_run_mode(context)
+    open_id_filter = get_open_id_filter()
+    if open_id_filter:
+        print(f"Filter enabled by Airflow Variable STRIPE_OPEN_ID_FILTER: {sorted(open_id_filter)}")
+    else:
+        print("No open_id filter configured; process all accounts.")
+    delete_resource_by_mode(resource, mode, context, open_id_filter)
+    for child_resource in get_child_resources(resource):
+        print(f"Delete child resource={child_resource} with parent resource={resource}")
+        delete_resource_by_mode(child_resource, mode, context, open_id_filter)
+
+def load_data(resource, **context):
+    mode = get_run_mode(context)
+    open_id_filter = get_open_id_filter()
+    if open_id_filter:
+        print(f"Filter enabled by Airflow Variable STRIPE_OPEN_ID_FILTER: {sorted(open_id_filter)}")
+    else:
+        print("No open_id filter configured; process all accounts.")
+    _load_resource(resource, mode, open_id_filter, context)
+
+def process_delete_insert(resource, **context):
+    """Gộp delete + load vào 1 task """
     mode = get_run_mode(context)
     open_id_filter = get_open_id_filter()
     if open_id_filter:
@@ -129,19 +151,13 @@ def process_all_resources(**context):
     else:
         print("No open_id filter configured; process all accounts.")
 
-    for resource in STRIPE_RESOURCES:
-        print(f"\n=== Processing {resource} ===")
+    print(f"=== [{resource}] Delete ===")
+    delete_resource_by_mode(resource, mode, context, open_id_filter)
+    for child_resource in get_child_resources(resource):
+        delete_resource_by_mode(child_resource, mode, context, open_id_filter)
 
-        # Delete
-        delete_resource_by_mode(resource, mode, context, open_id_filter)
-        for child_resource in get_child_resources(resource):
-            print(f"Delete child resource={child_resource} with parent resource={resource}")
-            delete_resource_by_mode(child_resource, mode, context, open_id_filter)
-
-        # Load
-        _load_resource(resource, mode, open_id_filter, context)
-
-    print("All resources processed.")
+    print(f"=== [{resource}] Load ===")
+    _load_resource(resource, mode, open_id_filter, context)
 
 
 def _load_resource(resource, mode, open_id_filter, context):

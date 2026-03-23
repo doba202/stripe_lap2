@@ -155,8 +155,12 @@ TABLE_CONFIG = {
     },
 }
 
-# --- Stripe accounts (env) ---------------------------------------------------
-STRIPE_ACCOUNTS = json.loads(os.getenv("STRIPE_ACCOUNTS_JSON", "{}"))
+# --- Stripe accounts (file) --------------------------------------------------
+_ACCOUNTS_FILE = os.path.join(
+    os.path.dirname(__file__), "..", "..", "credential_config", "stripe_accounts.json"
+)
+with open(_ACCOUNTS_FILE, "r", encoding="utf-8") as _f:
+    STRIPE_ACCOUNTS = json.load(_f)
 
 # --- Stripe API --------------------------------------------------------------
 BASE_URL = "https://api.stripe.com/v1"
