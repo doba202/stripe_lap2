@@ -35,7 +35,7 @@ with DAG(
 
     trigger_dbt = TriggerDagRunOperator(
         task_id="trigger_dbt",
-        trigger_dag_id="stripe_test_dag",
+        trigger_dag_id="stripe_dbt_pipeline",
         wait_for_completion=False,
     )
 
