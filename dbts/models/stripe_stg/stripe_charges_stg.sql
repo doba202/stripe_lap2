@@ -1,6 +1,13 @@
+{{ config(unique_key=['id', 'open_id']) }}
+
 WITH source AS (
     SELECT open_id, data_json
     FROM {{ source('stripe_stg', 'stripe_raw_charges') }}
+    WHERE 1=1
+    {% if is_incremental() %}
+        AND TIMESTAMP_SECONDS(SAFE_CAST(JSON_VALUE(data_json, '$.created') AS INT64))
+            >= TIMESTAMP_SECONDS({{ var('stripe_start_ts') }})
+    {% endif %}
 ),
 parsed AS (
     SELECT

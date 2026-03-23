@@ -21,12 +21,14 @@ on-run-end:
 
 vars:
   "dbt_date:time_zone": "Asia/Ho_Chi_Minh"
+  stripe_lookback_days: 3
+  # stripe_start_ts: Unix timestamp đầu cửa sổ incremental.
+  # Được truyền qua --vars từ Airflow (build_time_window).
+  # Default = 0 (1970-01-01) → quét toàn bộ khi chạy thủ công không truyền --vars.
+  stripe_start_ts: 0
 
 models:
   stripe_lap:
     stripe_stg:
-      +materialized: table
-
-
-        
-
+      +materialized: incremental
+      +incremental_strategy: merge

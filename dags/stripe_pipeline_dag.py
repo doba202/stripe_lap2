@@ -2,13 +2,23 @@ from datetime import datetime
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow.api.common.trigger_dag import trigger_dag
 
 from services.pipeline.stripe_airflow import (
     start,
     process_all_resources,
     end,
+    get_run_mode,
 )
+
+
+def _end(**context):
+    end(**context)  # logic end gốc
+
+    # Không trigger dbt khi chạy init (full load)
+    mode = get_run_mode(context, default="daily")
+    if mode != "init":
+        trigger_dag(dag_id="stripe_dbt_pipeline")
 
 
 with DAG(
@@ -18,25 +28,8 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    start_task = PythonOperator(
-        task_id="start",
-        python_callable=start,
-    )
+    start_task   = PythonOperator(task_id="start",   python_callable=start)
+    process_task = PythonOperator(task_id="process", python_callable=process_all_resources)
+    end_task     = PythonOperator(task_id="end",     python_callable=_end)
 
-    process_task = PythonOperator(
-        task_id="process",
-        python_callable=process_all_resources,
-    )
-
-    end_task = PythonOperator(
-        task_id="end",
-        python_callable=end,
-    )
-
-    trigger_dbt = TriggerDagRunOperator(
-        task_id="trigger_dbt",
-        trigger_dag_id="stripe_dbt_pipeline",
-        wait_for_completion=False,
-    )
-
-    start_task >> process_task >> end_task >> trigger_dbt
+    start_task >> process_task >> end_task
